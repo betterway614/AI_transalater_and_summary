@@ -43,7 +43,7 @@ export function createTray(getWindow: () => BrowserWindow | null): Tray {
     }
   ])
 
-  tray.setToolTip('AI 同声传译桌面助手')
+  tray.setToolTip('VoiceBridge · 语桥')
   tray.setContextMenu(contextMenu)
 
   tray.on('double-click', () => {

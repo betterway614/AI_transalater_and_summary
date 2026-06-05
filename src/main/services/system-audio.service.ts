@@ -43,14 +43,14 @@ export class SystemAudioService {
   private startWithSox(soxPath: string, onData: (data: Buffer) => void): void {
     log.info('[SystemAudio] Starting with sox WASAPI loopback')
 
-    // sox -t wasapi default -t wav -r 16000 -c 1 -b 16 - (output as raw PCM)
     this.process = spawn(soxPath, [
       '-t', 'wasapi', 'default',  // WASAPI loopback capture
-      '-t', 'wav',                 // Output format
-      '-',                         // Output to stdout
-      'rate', '16000',             // Resample to 16kHz
-      'channels', '1',             // Mono
-      'bits', '16'                 // 16-bit
+      '-t', 'raw',                 // Raw PCM output (no WAV header)
+      '-e', 'signed-integer',      // Signed 16-bit PCM
+      '-b', '16',
+      '-r', '16000',              // 16kHz
+      '-c', '1',                   // Mono
+      '-'                          // Output to stdout
     ])
 
     this.setupProcessHandlers(this.process, onData)
@@ -60,13 +60,12 @@ export class SystemAudioService {
   private startWithFfmpeg(ffmpegPath: string, onData: (data: Buffer) => void): void {
     log.info('[SystemAudio] Starting with ffmpeg WASAPI')
 
-    // ffmpeg -f wasapi -i default -ar 16000 -ac 1 -f wav pipe:1
     this.process = spawn(ffmpegPath, [
-      '-f', 'dshow',               // DirectShow (Windows)
-      '-i', 'audio=virtual-audio-capturer', // or use wasapi
+      '-f', 'wasapi',              // WASAPI (Windows loopback)
+      '-i', 'default',             // Default audio output device
       '-ar', '16000',              // Sample rate
       '-ac', '1',                  // Mono
-      '-f', 'wav',                 // WAV output
+      '-f', 's16le',              // Raw signed 16-bit little-endian PCM
       '-acodec', 'pcm_s16le',     // 16-bit PCM
       'pipe:1'                     // Output to stdout
     ], { stdio: ['pipe', 'pipe', 'pipe'] })
@@ -77,14 +76,18 @@ export class SystemAudioService {
 
   private setupProcessHandlers(proc: ChildProcess, onData: (data: Buffer) => void): void {
     let buffer = Buffer.alloc(0)
-    const CHUNK_SIZE = 16000 * 2 * 3 // 3 seconds of 16kHz 16-bit mono
+    const SAMPLE_RATE = 16000
+    const BYTES_PER_SAMPLE = 2 // 16-bit
+    const CHUNK_SECONDS = 3
+    const CHUNK_SIZE = SAMPLE_RATE * BYTES_PER_SAMPLE * CHUNK_SECONDS
 
     proc.stdout?.on('data', (chunk: Buffer) => {
       buffer = Buffer.concat([buffer, chunk])
 
       while (buffer.length >= CHUNK_SIZE) {
-        const wavChunk = buffer.subarray(0, CHUNK_SIZE)
+        const pcmData = buffer.subarray(0, CHUNK_SIZE)
         buffer = buffer.subarray(CHUNK_SIZE)
+        const wavChunk = this.buildWavBuffer(pcmData, SAMPLE_RATE)
         onData(wavChunk)
       }
     })
@@ -122,6 +125,36 @@ export class SystemAudioService {
     }
 
     log.info('[SystemAudio] Stopped')
+  }
+
+  private buildWavBuffer(pcmData: Buffer, sampleRate: number): Buffer {
+    const numChannels = 1
+    const bitsPerSample = 16
+    const byteRate = sampleRate * numChannels * (bitsPerSample / 8)
+    const blockAlign = numChannels * (bitsPerSample / 8)
+    const dataSize = pcmData.length
+    const headerSize = 44
+    const totalSize = headerSize + dataSize
+
+    const header = Buffer.alloc(headerSize)
+    // RIFF header
+    header.write('RIFF', 0)
+    header.writeUInt32LE(totalSize - 8, 4)
+    header.write('WAVE', 8)
+    // fmt chunk
+    header.write('fmt ', 12)
+    header.writeUInt32LE(16, 16)       // chunk size
+    header.writeUInt16LE(1, 20)        // PCM format
+    header.writeUInt16LE(numChannels, 22)
+    header.writeUInt32LE(sampleRate, 24)
+    header.writeUInt32LE(byteRate, 28)
+    header.writeUInt16LE(blockAlign, 32)
+    header.writeUInt16LE(bitsPerSample, 34)
+    // data chunk
+    header.write('data', 36)
+    header.writeUInt32LE(dataSize, 40)
+
+    return Buffer.concat([header, pcmData])
   }
 
   getDevices(): string[] {

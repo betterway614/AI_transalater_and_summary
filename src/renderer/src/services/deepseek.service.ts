@@ -24,7 +24,7 @@ export class DeepSeekService {
 
   constructor(config: DeepSeekConfig) {
     this.apiKey = config.apiKey
-    this.model = config.model || 'deepseek-chat'
+    this.model = config.model || 'deepseek-v4-flash'
     this.baseUrl = config.baseUrl || 'https://api.deepseek.com'
   }
 

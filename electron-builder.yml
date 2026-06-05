@@ -1,5 +1,5 @@
-appId: com.ai-interpreter.desktop
-productName: AI 同声传译桌面助手
+appId: com.voicebridge.desktop
+productName: VoiceBridge · 语桥
 directories:
   buildResources: build
   output: dist
@@ -24,8 +24,8 @@ win:
   requestedExecutionLevel: asInvoker
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: AI 同声传译助手
-  uninstallDisplayName: AI 同声传译桌面助手
+  shortcutName: VoiceBridge 语桥
+  uninstallDisplayName: VoiceBridge · 语桥
   createDesktopShortcut: always
   createStartMenuShortcut: true
 mac:

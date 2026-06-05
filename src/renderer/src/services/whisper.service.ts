@@ -15,7 +15,7 @@ export class WhisperService {
     this.apiKey = config.apiKey
     this.model = config.model || 'whisper-1'
     this.baseUrl = config.baseUrl || 'https://api.openai.com'
-    this.language = config.language || 'en'
+    this.language = config.language || 'auto'
   }
 
   /**
@@ -26,8 +26,10 @@ export class WhisperService {
     const formData = new FormData()
     formData.append('file', audioBlob, 'audio.wav')
     formData.append('model', this.model)
-    formData.append('language', this.language)
     formData.append('response_format', 'text')
+    if (this.language && this.language !== 'auto') {
+      formData.append('language', this.language)
+    }
 
     const response = await fetch(`${this.baseUrl}/v1/audio/transcriptions`, {
       method: 'POST',

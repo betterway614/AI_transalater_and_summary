@@ -1,4 +1,4 @@
-# AI 同声传译桌面助手
+# VoiceBridge · 语桥
 
 基于 Electron + React 构建的 AI 同声传译桌面应用，支持从视频 URL、系统音频或麦克风捕获语音，实时生成双语字幕并提供 AI 摘要。
 

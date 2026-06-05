@@ -102,7 +102,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     translator: {
       provider: 'deepseek',
       apiKey: '',
-      model: 'deepseek-chat',
+      model: 'deepseek-v4-flash',
       baseUrl: 'https://api.deepseek.com',
     },
   },

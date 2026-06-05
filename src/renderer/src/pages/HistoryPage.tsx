@@ -1,6 +1,7 @@
 import { Box, Typography, Paper, Chip, IconButton, Tooltip } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import HistoryIcon from '@mui/icons-material/History'
 import { useEffect, useState } from 'react'
 import { useSubtitleStore } from '../store/subtitleStore'
 import type { SubtitleEntry } from '@shared/types'
@@ -16,7 +17,6 @@ export default function HistoryPage() {
   const clearEntries = useSubtitleStore((s) => s.clearEntries)
   const [sessions, setSessions] = useState<Session[]>([])
 
-  // Group entries into sessions (consecutive entries within 5 minutes)
   useEffect(() => {
     if (entries.length === 0) {
       setSessions([])
@@ -60,9 +60,11 @@ export default function HistoryPage() {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h5">翻译历史</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>
+          翻译历史
+        </Typography>
         {entries.length > 0 && (
-          <Tooltip title="清空记录">
+          <Tooltip title="清空记录" arrow>
             <IconButton size="small" onClick={clearEntries}>
               <DeleteOutlineIcon />
             </IconButton>
@@ -72,6 +74,7 @@ export default function HistoryPage() {
 
       {sessions.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
+          <HistoryIcon sx={{ fontSize: 56, color: 'text.disabled', opacity: 0.3, mb: 2 }} />
           <Typography color="text.secondary">暂无翻译记录</Typography>
           <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
             开始翻译后，记录将自动保存在此处
@@ -88,7 +91,14 @@ export default function HistoryPage() {
                 bgcolor: 'background.paper',
                 border: '1px solid',
                 borderColor: 'divider',
-                borderRadius: 2
+                borderRadius: 2,
+                transition: 'all 0.2s ease',
+                cursor: 'default',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  boxShadow: '0 2px 12px var(--hover-glow)',
+                  transform: 'translateY(-1px)'
+                }
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
@@ -98,8 +108,15 @@ export default function HistoryPage() {
                   </Typography>
                   <Chip label={`${session.entries.length} 条`} size="small" variant="outlined" />
                 </Box>
-                <Tooltip title="复制">
-                  <IconButton size="small" onClick={() => handleCopySession(session)}>
+                <Tooltip title="复制" arrow>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleCopySession(session)}
+                    sx={{
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: 'var(--hover-glow)' }
+                    }}
+                  >
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>

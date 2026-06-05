@@ -1,4 +1,4 @@
-export const APP_NAME = 'AI 同声传译桌面助手';
+export const APP_NAME = 'VoiceBridge · 语桥';
 export const APP_VERSION = '0.1.0';
 
 // 音频常量
@@ -24,11 +24,12 @@ export interface APIPreset {
 
 export const WHISPER_PRESETS: APIPreset[] = [
   { label: 'OpenAI', baseUrl: 'https://api.openai.com', models: ['whisper-1'] },
+  { label: '百炼大模型', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode', models: ['paraformer-v2', 'paraformer-realtime-v2'] },
   { label: '自定义', baseUrl: '', models: [] }
 ];
 
 export const TRANSLATOR_PRESETS: APIPreset[] = [
-  { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com', models: ['deepseek-chat', 'deepseek-reasoner'] },
+  { label: 'DeepSeek', baseUrl: 'https://api.deepseek.com', models: ['deepseek-v4-flash', 'deepseek-v4-pro'] },
   { label: 'OpenAI', baseUrl: 'https://api.openai.com', models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
   { label: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode', models: ['qwen-plus', 'qwen-turbo', 'qwen-max'] },
   { label: '月之暗面', baseUrl: 'https://api.moonshot.cn', models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'] },
@@ -37,6 +38,7 @@ export const TRANSLATOR_PRESETS: APIPreset[] = [
 ];
 
 export const WHISPER_LANGUAGES = [
+  { code: 'auto', label: '自动检测' },
   { code: 'en', label: '英语 (English)' },
   { code: 'zh', label: '中文 (Chinese)' },
   { code: 'ja', label: '日语 (Japanese)' },

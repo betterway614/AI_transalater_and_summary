@@ -72,7 +72,8 @@ export default function URLInputPanel() {
         bgcolor: 'background.paper',
         borderRadius: 2,
         border: '1px solid',
-        borderColor: 'divider'
+        borderColor: 'divider',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -99,7 +100,7 @@ export default function URLInputPanel() {
           onClick={handleToggle}
           startIcon={isRunning ? <StopIcon /> : <PlayArrowIcon />}
           color={isRunning ? 'error' : 'primary'}
-          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
+          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600, transition: 'all 0.15s ease', '&:hover': { transform: 'translateY(-1px)', boxShadow: 2 } }}
         >
           {isRunning ? '停止' : '开始'}
         </Button>

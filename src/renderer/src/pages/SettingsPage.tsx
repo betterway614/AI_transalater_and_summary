@@ -1,13 +1,44 @@
 import {
   Box, Typography, TextField, Slider, Select, MenuItem, FormControl, InputLabel,
-  Paper, Button, Divider, Chip, IconButton, InputAdornment, Tooltip, Alert
+  Paper, Button, Divider, Chip, IconButton, InputAdornment, Tooltip, Alert,
+  ToggleButtonGroup, ToggleButton
 } from '@mui/material'
-import { Visibility, VisibilityOff, ContentCopy, CheckCircle } from '@mui/icons-material'
+import { Visibility, VisibilityOff, CheckCircle } from '@mui/icons-material'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
+import LightModeIcon from '@mui/icons-material/LightMode'
+import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness'
+import TuneIcon from '@mui/icons-material/Tune'
+import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver'
+import TranslateIcon from '@mui/icons-material/Translate'
+import SubtitlesIcon from '@mui/icons-material/Subtitles'
+import HeadsetIcon from '@mui/icons-material/Headset'
+import LoginIcon from '@mui/icons-material/Login'
 import { useState } from 'react'
 import { useSettingsStore } from '../store/settingsStore'
 import { WHISPER_PRESETS, TRANSLATOR_PRESETS, WHISPER_LANGUAGES } from '@shared/constants'
 import type { APIPreset } from '@shared/constants'
 import PlatformLoginSection from '../components/Auth/PlatformLoginSection'
+
+function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+      <Box sx={{ color: 'primary.main', display: 'flex' }}>{icon}</Box>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: 15 }}>
+        {title}
+      </Typography>
+    </Box>
+  )
+}
+
+const paperSx = {
+  p: 2.5,
+  mb: 2,
+  bgcolor: 'background.paper',
+  borderRadius: 2,
+  border: '1px solid',
+  borderColor: 'divider',
+  transition: 'background-color 0.2s ease, border-color 0.2s ease'
+}
 
 export default function SettingsPage() {
   const settings = useSettingsStore((s) => s.settings)
@@ -21,13 +52,11 @@ export default function SettingsPage() {
   const [whisperTest, setWhisperTest] = useState<{ status: string; ok: boolean | null }>({ status: '', ok: null })
   const [translatorTest, setTranslatorTest] = useState<{ status: string; ok: boolean | null }>({ status: '', ok: null })
 
-  // Whisper 预设匹配
   const whisperPresetMatch = WHISPER_PRESETS.find(
     (p) => p.baseUrl === settings.ai.whisper.baseUrl && p.label !== '自定义'
   )
   const whisperPresetIndex = whisperPresetMatch ? WHISPER_PRESETS.indexOf(whisperPresetMatch) : WHISPER_PRESETS.length - 1
 
-  // Translator 预设匹配
   const translatorPresetMatch = TRANSLATOR_PRESETS.find(
     (p) => p.baseUrl === settings.ai.translator.baseUrl && p.label !== '自定义'
   )
@@ -137,7 +166,17 @@ export default function SettingsPage() {
     testResult: { status: string; ok: boolean | null }
   ) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-      <Button variant="outlined" size="small" onClick={onClick}>
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={onClick}
+        sx={{
+          textTransform: 'none',
+          fontWeight: 600,
+          transition: 'all 0.15s ease',
+          '&:hover': { transform: 'translateY(-1px)' }
+        }}
+      >
         {label}
       </Button>
       {testResult.status && (
@@ -145,6 +184,7 @@ export default function SettingsPage() {
           label={testResult.status}
           size="small"
           color={testResult.ok === true ? 'success' : testResult.ok === null ? 'warning' : 'error'}
+          icon={testResult.ok === true ? <CheckCircle /> : undefined}
         />
       )}
     </Box>
@@ -152,15 +192,40 @@ export default function SettingsPage() {
 
   return (
     <Box sx={{ p: 3, maxWidth: 600, overflow: 'auto' }}>
-      <Typography variant="h5" gutterBottom>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
         设置
       </Typography>
 
-      {/* ===== 语音识别 (Whisper) 设置 ===== */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-          语音识别 (Whisper)
+      {/* ===== 外观设置 ===== */}
+      <Paper elevation={0} sx={paperSx}>
+        <SectionHeader icon={<TuneIcon fontSize="small" />} title="外观设置" />
+
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          主题模式
         </Typography>
+        <ToggleButtonGroup
+          value={settings.general.theme}
+          exclusive
+          onChange={(_, value) => { if (value) updateGeneral({ theme: value }) }}
+          size="small"
+          fullWidth
+          sx={{ mb: 2 }}
+        >
+          <ToggleButton value="light" sx={{ textTransform: 'none', gap: 0.5 }}>
+            <LightModeIcon fontSize="small" /> 浅色
+          </ToggleButton>
+          <ToggleButton value="dark" sx={{ textTransform: 'none', gap: 0.5 }}>
+            <DarkModeIcon fontSize="small" /> 深色
+          </ToggleButton>
+          <ToggleButton value="system" sx={{ textTransform: 'none', gap: 0.5 }}>
+            <SettingsBrightnessIcon fontSize="small" /> 跟随系统
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Paper>
+
+      {/* ===== 语音识别 (Whisper) 设置 ===== */}
+      <Paper elevation={0} sx={paperSx}>
+        <SectionHeader icon={<RecordVoiceOverIcon fontSize="small" />} title="语音识别 (Whisper)" />
 
         <FormControl size="small" fullWidth sx={{ mb: 2 }}>
           <InputLabel>服务商预设</InputLabel>
@@ -212,7 +277,7 @@ export default function SettingsPage() {
         <FormControl size="small" fullWidth sx={{ mb: 2 }}>
           <InputLabel>识别语言</InputLabel>
           <Select
-            value={settings.ai.whisper.language || 'en'}
+            value={settings.ai.whisper.language || 'auto'}
             label="识别语言"
             onChange={(e) => updateAI({ whisper: { ...settings.ai.whisper, language: e.target.value } })}
           >
@@ -226,10 +291,8 @@ export default function SettingsPage() {
       </Paper>
 
       {/* ===== 翻译引擎设置 ===== */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-          翻译引擎
-        </Typography>
+      <Paper elevation={0} sx={paperSx}>
+        <SectionHeader icon={<TranslateIcon fontSize="small" />} title="翻译引擎" />
 
         <FormControl size="small" fullWidth sx={{ mb: 2 }}>
           <InputLabel>服务商预设</InputLabel>
@@ -282,10 +345,8 @@ export default function SettingsPage() {
       </Paper>
 
       {/* 字幕设置 */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-          字幕设置
-        </Typography>
+      <Paper elevation={0} sx={paperSx}>
+        <SectionHeader icon={<SubtitlesIcon fontSize="small" />} title="字幕设置" />
 
         <Typography variant="body2" color="text.secondary" gutterBottom>
           字体大小: {settings.subtitle.fontSize}px
@@ -313,10 +374,8 @@ export default function SettingsPage() {
       </Paper>
 
       {/* 音频设置 */}
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-          音频设置
-        </Typography>
+      <Paper elevation={0} sx={paperSx}>
+        <SectionHeader icon={<HeadsetIcon fontSize="small" />} title="音频设置" />
 
         <Typography variant="body2" color="text.secondary" gutterBottom>
           VAD 灵敏度
@@ -334,10 +393,8 @@ export default function SettingsPage() {
       </Paper>
 
       {/* 视频平台登录 */}
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-          视频平台登录
-        </Typography>
+      <Paper elevation={0} sx={paperSx}>
+        <SectionHeader icon={<LoginIcon fontSize="small" />} title="视频平台登录" />
 
         <Alert severity="info" sx={{ mb: 2 }}>
           部分平台视频需要登录才能访问。点击下方按钮打开登录窗口，登录成功后自动保存。

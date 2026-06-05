@@ -14,6 +14,23 @@ interface SettingsState {
   init: () => Promise<void>
 }
 
+function deepMerge<T extends Record<string, any>>(defaults: T, saved: Partial<T>): T {
+  const result = { ...defaults }
+  for (const key of Object.keys(saved) as Array<keyof T>) {
+    const savedVal = saved[key]
+    const defaultVal = defaults[key]
+    if (
+      savedVal && typeof savedVal === 'object' && !Array.isArray(savedVal) &&
+      defaultVal && typeof defaultVal === 'object' && !Array.isArray(defaultVal)
+    ) {
+      result[key] = deepMerge(defaultVal as any, savedVal as any)
+    } else if (savedVal !== undefined) {
+      result[key] = savedVal as T[keyof T]
+    }
+  }
+  return result
+}
+
 function persist(settings: AppSettings) {
   window.api?.store.set('settings', settings).catch(() => {})
 }
@@ -63,7 +80,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const saved = (await window.api?.store.get('settings')) as AppSettings | undefined
       if (saved) {
-        set({ settings: { ...DEFAULT_SETTINGS, ...saved }, isLoaded: true })
+        set({ settings: deepMerge(DEFAULT_SETTINGS, saved), isLoaded: true })
       } else {
         set({ isLoaded: true })
       }

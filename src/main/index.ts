@@ -7,7 +7,7 @@ import { createTray } from './tray'
 app.whenReady().then(() => {
   const isDev = !app.isPackaged
 
-  app.setAppUserModelId('com.ai-interpreter.desktop')
+  app.setAppUserModelId('com.voicebridge.desktop')
 
   if (isDev) {
     app.on('browser-window-created', (_, window) => {

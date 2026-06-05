@@ -1,7 +1,7 @@
 {
-  "name": "ai-interpreter-desktop",
+  "name": "voicebridge-desktop",
   "version": "0.1.0",
-  "description": "AI 同声传译桌面助手",
+  "description": "VoiceBridge · 语桥 — AI 同声传译桌面助手",
   "main": "./out/main/index.js",
   "author": "AI Interpreter Team",
   "license": "MIT",

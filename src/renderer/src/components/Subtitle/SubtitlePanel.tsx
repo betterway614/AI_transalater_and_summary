@@ -1,4 +1,5 @@
 import { Box, Paper, Typography } from '@mui/material'
+import SubtitlesIcon from '@mui/icons-material/Subtitles'
 import { useRef, useEffect } from 'react'
 import { useSubtitleStore } from '../../store/subtitleStore'
 import { useSettingsStore } from '../../store/settingsStore'
@@ -29,7 +30,8 @@ export default function SubtitlePanel() {
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'divider',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}
     >
       <Box
@@ -43,7 +45,7 @@ export default function SubtitlePanel() {
           justifyContent: 'space-between'
         }}
       >
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, fontSize: 12, letterSpacing: 0.5, textTransform: 'uppercase' }}>
           字幕
         </Typography>
         <Typography variant="caption" color="text.disabled">
@@ -56,13 +58,18 @@ export default function SubtitlePanel() {
           <Box
             sx={{
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
-              minHeight: 200
+              minHeight: 200,
+              gap: 1
             }}
           >
-            <Typography color="text.disabled">开始翻译后，字幕将在此显示</Typography>
+            <SubtitlesIcon sx={{ fontSize: 40, color: 'text.disabled', opacity: 0.4 }} />
+            <Typography color="text.disabled" variant="body2">
+              开始翻译后，字幕将在此显示
+            </Typography>
           </Box>
         ) : (
           displayEntries.map((entry) => <SubtitleLine key={entry.id} entry={entry} fontSize={fontSize} />)

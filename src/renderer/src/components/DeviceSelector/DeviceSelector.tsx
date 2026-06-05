@@ -4,13 +4,7 @@ import StopIcon from '@mui/icons-material/Stop'
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useSettingsStore } from '../../store/settingsStore'
-
-const languages = [
-  { code: 'en', name: '英文' },
-  { code: 'zh', name: '中文' },
-  { code: 'ja', name: '日文' },
-  { code: 'ko', name: '韩文' }
-]
+import { WHISPER_LANGUAGES } from '@shared/constants'
 
 interface DeviceSelectorProps {
   onStart: () => void
@@ -67,7 +61,8 @@ export default function DeviceSelector({ onStart, onStop }: DeviceSelectorProps)
         bgcolor: 'background.paper',
         borderRadius: 2,
         border: '1px solid',
-        borderColor: 'divider'
+        borderColor: 'divider',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
@@ -100,13 +95,13 @@ export default function DeviceSelector({ onStart, onStop }: DeviceSelectorProps)
           <InputLabel>源语言</InputLabel>
           <Select
             label="源语言"
-            value={settings.ai.whisper.language || 'en'}
+            value={settings.ai.whisper.language || 'auto'}
             onChange={(e) => handleSourceLangChange(e.target.value)}
             disabled={isRunning}
           >
-            {languages.map((l) => (
+            {WHISPER_LANGUAGES.map((l) => (
               <MenuItem key={l.code} value={l.code}>
-                {l.name}
+                {l.label}
               </MenuItem>
             ))}
           </Select>
@@ -117,9 +112,9 @@ export default function DeviceSelector({ onStart, onStop }: DeviceSelectorProps)
         <FormControl size="small" sx={{ minWidth: 100 }}>
           <InputLabel>目标语言</InputLabel>
           <Select label="目标语言" value="zh" disabled>
-            {languages.map((l) => (
+            {WHISPER_LANGUAGES.filter((l) => l.code !== 'auto').map((l) => (
               <MenuItem key={l.code} value={l.code}>
-                {l.name}
+                {l.label}
               </MenuItem>
             ))}
           </Select>
@@ -132,7 +127,7 @@ export default function DeviceSelector({ onStart, onStop }: DeviceSelectorProps)
           onClick={handleToggle}
           startIcon={isRunning ? <StopIcon /> : <PlayArrowIcon />}
           color={isRunning ? 'error' : 'primary'}
-          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
+          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600, transition: 'all 0.15s ease', '&:hover': { transform: 'translateY(-1px)', boxShadow: 2 } }}
         >
           {isRunning ? '停止' : '开始'}
         </Button>

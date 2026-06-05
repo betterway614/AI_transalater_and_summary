@@ -41,6 +41,20 @@ export default function ControlBar({ onStart, onStop }: ControlBarProps) {
     navigator.clipboard.writeText(content)
   }
 
+  const iconBtnSx = {
+    width: 32,
+    height: 32,
+    borderRadius: 1.5,
+    transition: 'all 0.15s ease',
+    '&:hover': {
+      bgcolor: 'var(--hover-glow)',
+      transform: 'scale(1.08)'
+    },
+    '&:active': {
+      transform: 'scale(0.95)'
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -52,7 +66,8 @@ export default function ControlBar({ onStart, onStop }: ControlBarProps) {
         bgcolor: 'background.paper',
         borderRadius: 2,
         border: '1px solid',
-        borderColor: 'divider'
+        borderColor: 'divider',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -60,16 +75,17 @@ export default function ControlBar({ onStart, onStop }: ControlBarProps) {
 
         {isRunning && (
           <>
-            <Tooltip title={isPaused ? '恢复' : '暂停'}>
+            <Tooltip title={isPaused ? '恢复' : '暂停'} arrow>
               <IconButton
                 size="small"
                 onClick={isPaused ? resumeTranslation : pauseTranslation}
+                sx={iconBtnSx}
               >
                 {isPaused ? <PlayArrowIcon fontSize="small" /> : <PauseIcon fontSize="small" />}
               </IconButton>
             </Tooltip>
-            <Tooltip title="停止">
-              <IconButton size="small" onClick={handleStop} color="error">
+            <Tooltip title="停止" arrow>
+              <IconButton size="small" onClick={handleStop} color="error" sx={iconBtnSx}>
                 <StopIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -78,25 +94,26 @@ export default function ControlBar({ onStart, onStop }: ControlBarProps) {
       </Box>
 
       <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <Tooltip title={showFloating ? '隐藏浮动字幕' : '显示浮动字幕'}>
+        <Tooltip title={showFloating ? '隐藏浮动字幕' : '显示浮动字幕'} arrow>
           <IconButton
             size="small"
             onClick={() => setShowFloating(!showFloating)}
             color={showFloating ? 'primary' : 'default'}
+            sx={iconBtnSx}
           >
             <SubtitlesIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <Tooltip title="导出 Markdown">
+        <Tooltip title="导出 Markdown" arrow>
           <span>
-            <IconButton size="small" onClick={handleExport} disabled={entries.length === 0}>
+            <IconButton size="small" onClick={handleExport} disabled={entries.length === 0} sx={iconBtnSx}>
               <FileDownloadIcon fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title="复制全部">
+        <Tooltip title="复制全部" arrow>
           <span>
-            <IconButton size="small" onClick={handleCopy} disabled={entries.length === 0}>
+            <IconButton size="small" onClick={handleCopy} disabled={entries.length === 0} sx={iconBtnSx}>
               <ContentCopyIcon fontSize="small" />
             </IconButton>
           </span>

@@ -14,7 +14,12 @@ export default function SubtitleLine({ entry, fontSize = 16 }: SubtitleLineProps
         px: 2,
         borderBottom: '1px solid',
         borderColor: 'divider',
-        opacity: entry.isFinal ? 1 : 0.7
+        opacity: entry.isFinal ? 1 : 0.7,
+        transition: 'background-color 0.15s ease',
+        cursor: 'default',
+        '&:hover': {
+          bgcolor: 'var(--hover-glow)'
+        }
       }}
     >
       <Typography
@@ -23,7 +28,8 @@ export default function SubtitleLine({ entry, fontSize = 16 }: SubtitleLineProps
           fontSize,
           color: 'text.secondary',
           lineHeight: 1.6,
-          fontStyle: entry.isFinal ? 'normal' : 'italic'
+          fontStyle: entry.isFinal ? 'normal' : 'italic',
+          transition: 'color 0.2s ease'
         }}
       >
         {entry.originalText}
@@ -34,7 +40,8 @@ export default function SubtitleLine({ entry, fontSize = 16 }: SubtitleLineProps
           fontSize: fontSize + 2,
           color: 'secondary.main',
           fontWeight: 500,
-          lineHeight: 1.6
+          lineHeight: 1.6,
+          transition: 'color 0.2s ease'
         }}
       >
         {entry.translatedText || '...'}

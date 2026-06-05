@@ -1,10 +1,11 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, nativeImage } from 'electron'
 import { join } from 'path'
 
 let mainWindow: BrowserWindow | null = null
 
 export function createMainWindow(): BrowserWindow {
   const isDev = !app.isPackaged
+  const iconPath = join(__dirname, '../../resources/icon.png')
 
   mainWindow = new BrowserWindow({
     width: 1100,
@@ -14,6 +15,7 @@ export function createMainWindow(): BrowserWindow {
     show: false,
     frame: false,
     titleBarStyle: 'hidden',
+    icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

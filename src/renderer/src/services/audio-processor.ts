@@ -10,7 +10,7 @@ export async function resampleAudio(
 ): Promise<Float32Array> {
   if (sourceRate === targetRate) return audioData
 
-  const ctx = new OfflineAudioContext(1, audioData.length * (targetRate / sourceRate), targetRate)
+  const ctx = new OfflineAudioContext(1, Math.ceil(audioData.length * (targetRate / sourceRate)), targetRate)
   const buffer = ctx.createBuffer(1, audioData.length, sourceRate)
   buffer.getChannelData(0).set(audioData)
 

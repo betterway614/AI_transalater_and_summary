@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+    <linearGradient id="nameGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="50%" stop-color="#93c5fd"/>
+      <stop offset="100%" stop-color="#c4b5fd"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="50%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <filter id="textGlow" x="-10%" y="-30%" width="120%" height="160%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#60a5fa" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="108" ry="108" fill="url(#bg)"/>
+
+  <!-- Radial glow -->
+  <circle cx="256" cy="210" r="190" fill="url(#glow)"/>
+
+  <!-- Subtle grid dots -->
+  <g opacity="0.06" fill="#fff">
+    <circle cx="100" cy="90" r="2.5"/><circle cx="160" cy="90" r="2.5"/>
+    <circle cx="220" cy="90" r="2.5"/><circle cx="292" cy="90" r="2.5"/>
+    <circle cx="352" cy="90" r="2.5"/><circle cx="412" cy="90" r="2.5"/>
+    <circle cx="100" cy="140" r="2.5"/><circle cx="412" cy="140" r="2.5"/>
+    <circle cx="100" cy="370" r="2.5"/><circle cx="412" cy="370" r="2.5"/>
+    <circle cx="100" cy="430" r="2.5"/><circle cx="160" cy="430" r="2.5"/>
+    <circle cx="220" cy="430" r="2.5"/><circle cx="292" cy="430" r="2.5"/>
+    <circle cx="352" cy="430" r="2.5"/><circle cx="412" cy="430" r="2.5"/>
+  </g>
+
+  <!-- Left sound waves -->
+  <g stroke="url(#accent)" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.6">
+    <path d="M 118 185 Q 107 210 118 235"/>
+    <path d="M 98 170 Q 80 210 98 250"/>
+    <path d="M 78 155 Q 54 210 78 265"/>
+  </g>
+
+  <!-- Right sound waves -->
+  <g stroke="url(#accent)" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.6">
+    <path d="M 394 185 Q 405 210 394 235"/>
+    <path d="M 414 170 Q 432 210 414 250"/>
+    <path d="M 434 155 Q 458 210 434 265"/>
+  </g>
+
+  <!-- Left speech bubble -->
+  <g filter="url(#shadow)">
+    <path d="M 145 145 L 268 145 Q 288 145 288 165 L 288 225 Q 288 245 268 245 L 193 245 L 168 268 L 173 245 L 145 245 Q 125 245 125 225 L 125 165 Q 125 145 145 145 Z"
+          fill="white" fill-opacity="0.12" stroke="white" stroke-opacity="0.25" stroke-width="1.5"/>
+  </g>
+  <text x="206" y="208" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="50" font-weight="700" fill="white" fill-opacity="0.9" letter-spacing="-1">Hi</text>
+
+  <!-- Right speech bubble -->
+  <g filter="url(#shadow)">
+    <path d="M 244 230 L 367 230 Q 387 230 387 250 L 387 310 Q 387 330 367 330 L 348 330 L 323 353 L 328 330 L 244 330 Q 224 330 224 310 L 224 250 Q 224 230 244 230 Z"
+          fill="white" fill-opacity="0.12" stroke="white" stroke-opacity="0.25" stroke-width="1.5"/>
+  </g>
+  <text x="305" y="296" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="46" font-weight="700" fill="url(#accent)" letter-spacing="2">你好</text>
+
+  <!-- Translation arrow -->
+  <g stroke="url(#accent)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.8">
+    <path d="M 276 258 L 241 258"/>
+    <path d="M 251 250 L 241 258 L 251 266"/>
+  </g>
+
+  <!-- App name: VoiceBridge -->
+  <text x="256" y="408" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="42" font-weight="800" fill="url(#nameGrad)" letter-spacing="3" filter="url(#textGlow)">VoiceBridge</text>
+
+  <!-- Chinese subtitle -->
+  <text x="256" y="445" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="18" font-weight="500" fill="white" fill-opacity="0.5" letter-spacing="8">语 桥</text>
+
+  <!-- Top highlight -->
+  <line x1="140" y1="42" x2="372" y2="42" stroke="white" stroke-opacity="0.05" stroke-width="1"/>
+</svg>

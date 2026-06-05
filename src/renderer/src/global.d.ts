@@ -35,3 +35,8 @@ interface ElectronAPI {
 declare interface Window {
   api: ElectronAPI
 }
+
+declare module '*.svg' {
+  const src: string
+  export default src
+}

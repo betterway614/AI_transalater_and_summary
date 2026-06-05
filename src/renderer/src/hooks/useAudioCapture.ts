@@ -46,6 +46,8 @@ export function useAudioCapture(options: AudioCaptureOptions) {
       const wavBuffer = pcmToWav(resampled, targetRate)
       const blob = new Blob([wavBuffer], { type: 'audio/wav' })
       onAudioChunkRef.current(blob)
+    }).catch((err) => {
+      console.error('[AudioCapture] Resample error:', err)
     })
   }, [])
 
@@ -99,7 +101,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
             silenceTimerRef.current = null
           }
           chunkBufferRef.current.push(chunk)
-          chunkDurationRef.current += (chunk.length / sampleRate) * 1000
+          chunkDurationRef.current += (chunk.length / ctx.sampleRate) * 1000
 
           if (chunkDurationRef.current >= 1500) {
             flushBuffer()

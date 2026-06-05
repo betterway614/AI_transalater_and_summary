@@ -1,9 +1,34 @@
-import { Box, IconButton, Typography } from '@mui/material'
+import { Box, IconButton, Typography, Tooltip } from '@mui/material'
 import MinimizeIcon from '@mui/icons-material/Minimize'
 import CropSquareIcon from '@mui/icons-material/CropSquare'
 import CloseIcon from '@mui/icons-material/Close'
+import DarkModeIcon from '@mui/icons-material/DarkMode'
+import LightModeIcon from '@mui/icons-material/LightMode'
+import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness'
+import { useSettingsStore } from '../../store/settingsStore'
+
+const themeOrder = ['system', 'light', 'dark'] as const
+const themeIcons = {
+  system: <SettingsBrightnessIcon fontSize="small" />,
+  light: <LightModeIcon fontSize="small" />,
+  dark: <DarkModeIcon fontSize="small" />
+}
+const themeLabels = {
+  system: '跟随系统',
+  light: '浅色模式',
+  dark: '深色模式'
+}
 
 export default function TitleBar() {
+  const theme = useSettingsStore((s) => s.settings.general.theme)
+  const updateGeneral = useSettingsStore((s) => s.updateGeneral)
+
+  const cycleTheme = () => {
+    const idx = themeOrder.indexOf(theme)
+    const next = themeOrder[(idx + 1) % themeOrder.length]
+    updateGeneral({ theme: next })
+  }
+
   return (
     <Box
       className="drag"
@@ -11,31 +36,71 @@ export default function TitleBar() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 32,
+        height: 36,
         px: 2,
-        bgcolor: 'background.paper',
+        bgcolor: 'var(--titlebar-bg)',
         borderBottom: '1px solid',
         borderColor: 'divider',
         WebkitAppRegion: 'drag',
-        userSelect: 'none'
+        userSelect: 'none',
+        transition: 'background-color 0.3s ease, border-color 0.3s ease'
       }}
     >
-      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13 }}>
-        AI 同声传译桌面助手
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: 600,
+          fontSize: 13,
+          letterSpacing: 0.3,
+          color: 'text.primary'
+        }}
+      >
+        VoiceBridge · 语桥
       </Typography>
 
-      <Box sx={{ display: 'flex', gap: 0.5, WebkitAppRegion: 'no-drag' }}>
+      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', WebkitAppRegion: 'no-drag' }}>
+        {/* Theme toggle */}
+        <Tooltip title={themeLabels[theme]} arrow>
+          <IconButton
+            size="small"
+            onClick={cycleTheme}
+            aria-label="切换主题"
+            sx={{
+              width: 28,
+              height: 28,
+              color: 'text.secondary',
+              '&:hover': {
+                color: 'primary.main',
+                bgcolor: 'var(--hover-glow)'
+              }
+            }}
+          >
+            {themeIcons[theme]}
+          </IconButton>
+        </Tooltip>
+
+        {/* Window controls */}
         <IconButton
           size="small"
           onClick={() => window.api?.window.minimize()}
-          sx={{ width: 32, height: 32 }}
+          sx={{
+            width: 28,
+            height: 28,
+            color: 'text.secondary',
+            '&:hover': { bgcolor: 'action.hover' }
+          }}
         >
           <MinimizeIcon fontSize="small" />
         </IconButton>
         <IconButton
           size="small"
           onClick={() => window.api?.window.maximize()}
-          sx={{ width: 32, height: 32 }}
+          sx={{
+            width: 28,
+            height: 28,
+            color: 'text.secondary',
+            '&:hover': { bgcolor: 'action.hover' }
+          }}
         >
           <CropSquareIcon fontSize="small" />
         </IconButton>
@@ -43,8 +108,9 @@ export default function TitleBar() {
           size="small"
           onClick={() => window.api?.window.close()}
           sx={{
-            width: 32,
-            height: 32,
+            width: 28,
+            height: 28,
+            color: 'text.secondary',
             '&:hover': { bgcolor: 'error.main', color: 'white' }
           }}
         >

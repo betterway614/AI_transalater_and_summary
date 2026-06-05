@@ -24,7 +24,9 @@ export default function ModeTabs() {
         bgcolor: 'background.paper',
         borderRadius: 2,
         border: '1px solid',
-        borderColor: 'divider'
+        borderColor: 'divider',
+        overflow: 'hidden',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}
     >
       <Tabs
@@ -37,7 +39,15 @@ export default function ModeTabs() {
             minHeight: 44,
             textTransform: 'none',
             fontWeight: 600,
-            fontSize: 14
+            fontSize: 14,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              bgcolor: 'var(--hover-glow)'
+            }
+          },
+          '& .MuiTabs-indicator': {
+            height: 2.5,
+            borderRadius: '2px 2px 0 0'
           }
         }}
       >

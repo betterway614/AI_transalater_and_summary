@@ -20,8 +20,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Smooth scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -29,18 +30,42 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.3);
+  background: rgba(128, 128, 128, 0.25);
   border-radius: 3px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.5);
+  background: rgba(128, 128, 128, 0.45);
 }
 
+/* Electron drag regions */
 .no-drag {
   -webkit-app-region: no-drag;
 }
 
 .drag {
   -webkit-app-region: drag;
+}
+
+/* Transition utilities */
+.transition-all {
+  transition: all 0.2s ease;
+}
+
+.transition-fast {
+  transition: all 0.15s ease;
+}
+
+.transition-slow {
+  transition: all 0.3s ease;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

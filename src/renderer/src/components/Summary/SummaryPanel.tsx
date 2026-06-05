@@ -5,7 +5,6 @@ import {
   IconButton,
   Collapse,
   Tooltip,
-  Button,
   CircularProgress,
   Tabs,
   Tab
@@ -38,6 +37,19 @@ export default function SummaryPanel() {
     if (summary) navigator.clipboard.writeText(summary)
   }
 
+  const iconBtnSx = {
+    width: 28,
+    height: 28,
+    transition: 'all 0.15s ease',
+    '&:hover': {
+      bgcolor: 'var(--hover-glow)',
+      transform: 'scale(1.1)'
+    },
+    '&:active': {
+      transform: 'scale(0.9)'
+    }
+  }
+
   return (
     <Paper
       elevation={0}
@@ -46,7 +58,8 @@ export default function SummaryPanel() {
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'divider',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}
     >
       <Box
@@ -57,18 +70,20 @@ export default function SummaryPanel() {
           px: 2,
           py: 1,
           cursor: 'pointer',
-          '&:hover': { bgcolor: 'action.hover' }
+          transition: 'background-color 0.15s ease',
+          '&:hover': { bgcolor: 'var(--hover-glow)' }
         }}
         onClick={() => setExpanded(!expanded)}
       >
-        <Typography variant="subtitle2" color="text.secondary">
+        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600, fontSize: 12, letterSpacing: 0.5, textTransform: 'uppercase' }}>
           AI 总结
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           {hasEntries && !summary && !isGenerating && (
-            <Tooltip title="生成总结">
+            <Tooltip title="生成总结" arrow>
               <IconButton
                 size="small"
+                sx={{ ...iconBtnSx, color: 'primary.main' }}
                 onClick={(e) => {
                   e.stopPropagation()
                   generateSummary()
@@ -80,9 +95,10 @@ export default function SummaryPanel() {
           )}
           {summary && (
             <>
-              <Tooltip title="导出 Markdown">
+              <Tooltip title="导出 Markdown" arrow>
                 <IconButton
                   size="small"
+                  sx={iconBtnSx}
                   onClick={(e) => {
                     e.stopPropagation()
                     handleExport()
@@ -91,9 +107,10 @@ export default function SummaryPanel() {
                   <FileDownloadIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="复制">
+              <Tooltip title="复制" arrow>
                 <IconButton
                   size="small"
+                  sx={iconBtnSx}
                   onClick={(e) => {
                     e.stopPropagation()
                     handleCopy()
@@ -104,11 +121,13 @@ export default function SummaryPanel() {
               </Tooltip>
             </>
           )}
-          {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          <Box sx={{ transition: 'transform 0.2s ease', transform: expanded ? 'rotate(0)' : 'rotate(0)' }}>
+            {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          </Box>
         </Box>
       </Box>
 
-      <Collapse in={expanded}>
+      <Collapse in={expanded} timeout={250}>
         <Box sx={{ minHeight: 60 }}>
           {isGenerating ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, pb: 2 }}>
@@ -127,7 +146,16 @@ export default function SummaryPanel() {
                   borderBottom: 1,
                   borderColor: 'divider',
                   px: 1,
-                  '& .MuiTab-root': { minHeight: 36, py: 0, fontSize: '0.8rem' }
+                  '& .MuiTab-root': {
+                    minHeight: 36,
+                    py: 0,
+                    fontSize: '0.8rem',
+                    transition: 'color 0.2s ease'
+                  },
+                  '& .MuiTabs-indicator': {
+                    height: 2,
+                    borderRadius: '2px 2px 0 0'
+                  }
                 }}
               >
                 <Tab icon={<ArticleIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="文本" />
@@ -150,7 +178,7 @@ export default function SummaryPanel() {
           ) : (
             <Box sx={{ px: 2, pb: 2 }}>
               <Typography variant="body2" color="text.disabled">
-                翻译结束后点击 ✨ 按钮生成 AI 总结
+                翻译结束后点击 AI 按钮生成总结
               </Typography>
             </Box>
           )}
