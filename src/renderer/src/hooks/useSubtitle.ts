@@ -75,16 +75,19 @@ export function useSubtitle() {
       // Guard: don't start if no API key configured
       const settings = useSettingsStore.getState().settings
       if (!settings.ai.whisper.apiKey) {
-        console.warn('Whisper API key not configured')
+        console.log('[Subtitle] Whisper API key not configured — skipping ASR')
         return
       }
 
       try {
         setStatus('listening')
+        console.log(`[Subtitle] processAudioChunk: ${audioBlob.size} bytes, mode=${currentMode}`)
 
         // Stage 1: ASR
         const whisper = getWhisper()
+        console.log('[Subtitle] Calling Whisper transcribe...')
         const text = await whisper.transcribe(audioBlob)
+        console.log(`[Subtitle] Whisper result: "${text.substring(0, 100)}"`)
         if (!text.trim()) return
 
         // Stage 2: Create subtitle entry

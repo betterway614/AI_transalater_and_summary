@@ -3,9 +3,13 @@ import { createMainWindow, getMainWindow } from './window'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
 import { registerAllIpc } from './ipc'
 import { createTray } from './tray'
+import { destroyFloatingWindow } from './floating-subtitle'
+import log from 'electron-log'
 
 app.whenReady().then(() => {
   const isDev = !app.isPackaged
+
+  log.info('[Main] App ready, isDev:', isDev)
 
   app.setAppUserModelId('com.voicebridge.desktop')
 
@@ -33,6 +37,7 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
+  destroyFloatingWindow()
   if (process.platform !== 'darwin') {
     app.quit()
   }
@@ -54,4 +59,15 @@ ipcMain.on(IPC_CHANNELS.WINDOW_MAXIMIZE, () => {
 
 ipcMain.on(IPC_CHANNELS.WINDOW_CLOSE, () => {
   getMainWindow()?.close()
+})
+
+// 渲染进程日志 -> 终端（绕过 DevTools 可见性问题）
+ipcMain.on(IPC_CHANNELS.RENDERER_LOG, (_event, level: string, ...args: unknown[]) => {
+  const ts = new Date().toISOString().slice(11, 23)
+  const prefix = `[Renderer ${ts}]`
+  switch (level) {
+    case 'error': log.error(prefix, ...args); break
+    case 'warn': log.warn(prefix, ...args); break
+    default: log.info(prefix, ...args); break
+  }
 })

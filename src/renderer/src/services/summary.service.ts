@@ -40,66 +40,18 @@ export class SummaryService {
   }
 
   async *streamingSummarize(text: string): AsyncGenerator<SummaryResult> {
-    const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [
-          { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
-          { role: 'user', content: `请对以下内容生成结构化的思维导图大纲：\n\n${text}` }
-        ],
-        stream: true,
-        temperature: 0.3,
-        max_tokens: 4096
-      })
+    const result = await window.api.ai.chatCompletion({
+      baseUrl: this.baseUrl,
+      apiKey: this.apiKey,
+      model: this.model,
+      messages: [
+        { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+        { role: 'user', content: `请对以下内容生成结构化的思维导图大纲：\n\n${text}` }
+      ],
+      temperature: 0.3,
+      maxTokens: 4096
     })
 
-    if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Summary API error: ${response.status} - ${error}`)
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) throw new Error('No response body')
-
-    const decoder = new TextDecoder()
-    let accumulated = ''
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (!trimmed || !trimmed.startsWith('data: ')) continue
-        const data = trimmed.slice(6)
-        if (data === '[DONE]') {
-          yield { text: accumulated, isDone: true }
-          return
-        }
-
-        try {
-          const json = JSON.parse(data)
-          const delta = json.choices?.[0]?.delta?.content
-          if (delta) {
-            accumulated += delta
-            yield { text: accumulated, isDone: false }
-          }
-        } catch {
-          // Skip malformed JSON lines
-        }
-      }
-    }
-
-    yield { text: accumulated, isDone: true }
+    yield { text: result.text, isDone: true }
   }
 }

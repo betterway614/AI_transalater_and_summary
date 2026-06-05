@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, desktopCapturer } from 'electron'
 import { IPC_CHANNELS } from '../../shared/ipc-channels'
 import { SystemAudioService } from '../services/system-audio.service'
 
@@ -22,5 +22,11 @@ export function registerAudioIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.SYSTEM_AUDIO_DEVICES, async () => {
     return systemAudioService.getDevices()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SYSTEM_AUDIO_GET_SCREEN_SOURCE, async () => {
+    const sources = await desktopCapturer.getSources({ types: ['screen'] })
+    if (sources.length === 0) return null
+    return sources[0].id
   })
 }

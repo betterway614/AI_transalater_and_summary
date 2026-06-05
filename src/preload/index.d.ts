@@ -1,8 +1,18 @@
 interface ElectronAPI {
+  logToMain: (level: 'info' | 'warn' | 'error', ...args: unknown[]) => void
   window: {
     minimize: () => void
     maximize: () => void
     close: () => void
+  }
+  floating: {
+    show: () => Promise<boolean>
+    hide: () => Promise<boolean>
+    updateSubtitles: (entries: import('../shared/types').SubtitleEntry[]) => Promise<boolean>
+    updateTheme: (theme: string) => Promise<boolean>
+    setExpanded: (expanded: boolean) => void
+    onSubtitlesUpdate: (callback: (entries: import('../shared/types').SubtitleEntry[]) => void) => () => void
+    onThemeUpdate: (callback: (theme: string) => void) => () => void
   }
   store: {
     get: (key: string) => Promise<unknown>
@@ -19,6 +29,7 @@ interface ElectronAPI {
     start: () => Promise<void>
     stop: () => Promise<void>
     getDevices: () => Promise<string[]>
+    getScreenSource: () => Promise<string | null>
     onData: (callback: (data: ArrayBuffer) => void) => () => void
   }
   exportMarkdown: (content: string, defaultName?: string) => Promise<string | null>
@@ -29,6 +40,20 @@ interface ElectronAPI {
     logout: (platformId: string) => Promise<void>
     detectPlatform: (url: string) => Promise<string | null>
     getPlatforms: () => Promise<{ id: string; name: string }[]>
+  }
+  ai: {
+    transcribe: (config: {
+      baseUrl: string; apiKey: string; model: string; language: string
+      audioData: ArrayBuffer
+    }) => Promise<{ text: string }>
+    chatCompletion: (config: {
+      baseUrl: string; apiKey: string; model: string
+      messages: Array<{ role: string; content: string }>
+      temperature?: number; maxTokens?: number
+    }) => Promise<{ text: string }>
+    testConnection: (config: {
+      baseUrl: string; apiKey: string
+    }) => Promise<{ ok: boolean; status: number; statusText: string }>
   }
 }
 

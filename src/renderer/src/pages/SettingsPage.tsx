@@ -104,12 +104,13 @@ export default function SettingsPage() {
   const handleTestWhisper = async () => {
     setWhisperTest({ status: '测试中...', ok: null })
     try {
-      const response = await fetch(`${settings.ai.whisper.baseUrl}/v1/models`, {
-        headers: { Authorization: `Bearer ${settings.ai.whisper.apiKey}` }
+      const result = await window.api.ai.testConnection({
+        baseUrl: settings.ai.whisper.baseUrl,
+        apiKey: settings.ai.whisper.apiKey
       })
       setWhisperTest({
-        status: response.ok ? '连接成功' : `连接失败: ${response.status}`,
-        ok: response.ok
+        status: result.ok ? '连接成功' : `连接失败: ${result.status}`,
+        ok: result.ok
       })
     } catch {
       setWhisperTest({ status: '连接失败，请检查网络和 API Key', ok: false })
@@ -119,12 +120,13 @@ export default function SettingsPage() {
   const handleTestTranslator = async () => {
     setTranslatorTest({ status: '测试中...', ok: null })
     try {
-      const response = await fetch(`${settings.ai.translator.baseUrl}/v1/models`, {
-        headers: { Authorization: `Bearer ${settings.ai.translator.apiKey}` }
+      const result = await window.api.ai.testConnection({
+        baseUrl: settings.ai.translator.baseUrl,
+        apiKey: settings.ai.translator.apiKey
       })
       setTranslatorTest({
-        status: response.ok ? '连接成功' : `连接失败: ${response.status}`,
-        ok: response.ok
+        status: result.ok ? '连接成功' : `连接失败: ${result.status}`,
+        ok: result.ok
       })
     } catch {
       setTranslatorTest({ status: '连接失败，请检查网络和 API Key', ok: false })

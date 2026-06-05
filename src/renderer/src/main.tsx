@@ -5,6 +5,12 @@ import App from './App'
 import { useSettingsStore } from './store/settingsStore'
 import './assets/styles/global.css'
 
+const startupLog = (...args: unknown[]) => {
+  console.log(...args)
+  window.api?.logToMain('info', ...args)
+}
+startupLog('[Renderer] main.tsx executing, window.api available:', !!window.api)
+
 const sharedComponents = {
   MuiCssBaseline: {
     styleOverrides: {

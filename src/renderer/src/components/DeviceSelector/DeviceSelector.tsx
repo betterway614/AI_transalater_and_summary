@@ -38,6 +38,7 @@ export default function DeviceSelector({ onStart, onStop }: DeviceSelectorProps)
   }, [mode])
 
   const handleToggle = () => {
+    console.log(`[DeviceSelector] Toggle clicked, isRunning=${isRunning}, mode=${mode}`)
     if (isRunning) {
       onStop()
     } else {

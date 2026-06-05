@@ -25,12 +25,31 @@ export const useAppStore = create<AppState>((set) => ({
   setMode: (mode) => set({ mode }),
   setStatus: (status) => set({ status }),
 
-  startTranslation: () => set({ status: 'connecting', isPaused: false, showFloating: true }),
-  stopTranslation: () => set({ status: 'idle', isPaused: false, showFloating: false }),
+  startTranslation: () => {
+    set({ status: 'connecting', isPaused: false })
+    // Do NOT show floating window here — it steals focus and breaks getDisplayMedia().
+    // Caller must call setShowFloating(true) after audio capture succeeds.
+  },
+
+  stopTranslation: () => {
+    set({ status: 'idle', isPaused: false, showFloating: false })
+    window.api?.floating.hide()
+  },
+
   pauseTranslation: () => set((state) => ({ isPaused: true, status: state.status })),
   resumeTranslation: () => set((state) => ({ isPaused: false, status: 'listening' })),
 
-  setShowFloating: (show) => set({ showFloating: show }),
+  setShowFloating: (show) => {
+    set({ showFloating: show })
+    if (show) {
+      window.api?.floating.show()
+    } else {
+      window.api?.floating.hide()
+    }
+  },
 
-  reset: () => set({ mode: 'url', status: 'idle', isPaused: false, showFloating: false })
+  reset: () => {
+    set({ mode: 'url', status: 'idle', isPaused: false, showFloating: false })
+    window.api?.floating.hide()
+  }
 }))

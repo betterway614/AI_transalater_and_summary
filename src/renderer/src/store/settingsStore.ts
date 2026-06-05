@@ -32,7 +32,18 @@ function deepMerge<T extends Record<string, any>>(defaults: T, saved: Partial<T>
 }
 
 function persist(settings: AppSettings) {
-  window.api?.store.set('settings', settings).catch(() => {})
+  const hasWhisperKey = !!settings.ai.whisper.apiKey
+  const hasTranslatorKey = !!settings.ai.translator.apiKey
+  console.log(`[Settings] Persisting: whisperKey=${hasWhisperKey}, translatorKey=${hasTranslatorKey}`)
+  window.api?.store.set('settings', settings)
+    .then((result: any) => {
+      if (result?.success === false) {
+        console.error('[Settings] Persist failed on main process:', result.error)
+      } else {
+        console.log('[Settings] Persist success')
+      }
+    })
+    .catch((err) => console.error('[Settings] Persist IPC error:', err))
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -79,12 +90,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   init: async () => {
     try {
       const saved = (await window.api?.store.get('settings')) as AppSettings | undefined
+      console.log('[Settings] Loaded from disk:', saved ? `apiKey whisper=${saved.ai?.whisper?.apiKey ? 'YES' : 'NO'}, translator=${saved.ai?.translator?.apiKey ? 'YES' : 'NO'}` : 'null')
       if (saved) {
         set({ settings: deepMerge(DEFAULT_SETTINGS, saved), isLoaded: true })
       } else {
         set({ isLoaded: true })
       }
-    } catch {
+    } catch (err) {
+      console.error('[Settings] Load failed:', err)
       set({ isLoaded: true })
     }
   }

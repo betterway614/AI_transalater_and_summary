@@ -23,28 +23,19 @@ export class WhisperService {
    * Returns the transcribed text
    */
   async transcribe(audioBlob: Blob): Promise<string> {
-    const formData = new FormData()
-    formData.append('file', audioBlob, 'audio.wav')
-    formData.append('model', this.model)
-    formData.append('response_format', 'text')
-    if (this.language && this.language !== 'auto') {
-      formData.append('language', this.language)
-    }
+    const arrayBuffer = await audioBlob.arrayBuffer()
 
-    const response = await fetch(`${this.baseUrl}/v1/audio/transcriptions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`
-      },
-      body: formData
+    console.log(`[Whisper] POST ${this.baseUrl}/v1/audio/transcriptions blob=${audioBlob.size}B model=${this.model} lang=${this.language}`)
+
+    const result = await window.api.ai.transcribe({
+      baseUrl: this.baseUrl,
+      apiKey: this.apiKey,
+      model: this.model,
+      language: this.language,
+      audioData: arrayBuffer
     })
 
-    if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Whisper API error: ${response.status} - ${error}`)
-    }
-
-    const text = await response.text()
-    return text.trim()
+    console.log(`[Whisper] Response: "${result.text.substring(0, 100)}"`)
+    return result.text
   }
 }

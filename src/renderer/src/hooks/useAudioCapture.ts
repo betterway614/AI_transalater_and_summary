@@ -2,6 +2,9 @@ import { useRef, useCallback, useState, useEffect } from 'react'
 import { resampleAudio, detectVoiceActivity, pcmToWav } from '../services/audio-processor'
 import { useSettingsStore } from '../store/settingsStore'
 
+const log = (...args: unknown[]) => { console.log(...args); window.api?.logToMain('info', ...args) }
+const logErr = (...args: unknown[]) => { console.error(...args); window.api?.logToMain('error', ...args) }
+
 export interface AudioCaptureOptions {
   onAudioChunk: (wavBlob: Blob) => void
 }
@@ -45,13 +48,15 @@ export function useAudioCapture(options: AudioCaptureOptions) {
     resampleAudio(merged, ctx.sampleRate, targetRate).then((resampled) => {
       const wavBuffer = pcmToWav(resampled, targetRate)
       const blob = new Blob([wavBuffer], { type: 'audio/wav' })
+      log(`[MicCapture] flushBuffer -> WAV blob: ${blob.size} bytes, resampled: ${resampled.length} samples`)
       onAudioChunkRef.current(blob)
     }).catch((err) => {
-      console.error('[AudioCapture] Resample error:', err)
+      logErr('[AudioCapture] Resample error:', err)
     })
   }, [])
 
   const start = useCallback(async () => {
+    log('[MicCapture] ====== start() called ======')
     const settings = useSettingsStore.getState().settings
     const sampleRate = settings.audio.sampleRate || 16000
     sampleRateRef.current = sampleRate
@@ -80,22 +85,39 @@ export function useAudioCapture(options: AudioCaptureOptions) {
         audio: audioConstraints
       })
 
+      const audioTrack = stream.getAudioTracks()[0]
+      log('[MicCapture] getUserMedia success, track:', audioTrack?.label, 'settings:', JSON.stringify(audioTrack?.getSettings()))
       streamRef.current = stream
       const ctx = new AudioContext({ sampleRate })
       contextRef.current = ctx
+      log('[MicCapture] AudioContext created, actual sampleRate:', ctx.sampleRate, 'target:', sampleRate)
 
       const source = ctx.createMediaStreamSource(stream)
       const processor = ctx.createScriptProcessor(4096, 1, 1)
       processorRef.current = processor
 
+      let processCount = 0
+      let voiceCount = 0
       processor.onaudioprocess = (e) => {
         if (!isCapturingRef.current) return
+        processCount++
 
         const inputData = e.inputBuffer.getChannelData(0)
         const chunk = new Float32Array(inputData)
+
+        let rms = 0
+        for (let i = 0; i < chunk.length; i++) rms += chunk[i] * chunk[i]
+        rms = Math.sqrt(rms / chunk.length)
+        const db = 20 * Math.log10(rms + 1e-10)
+
         const hasVoice = detectVoiceActivity(chunk, vadThreshold)
 
+        if (processCount <= 10 || processCount % 100 === 0) {
+          log(`[MicCapture] #${processCount} rms=${rms.toFixed(6)} db=${db.toFixed(1)} thresh=${vadThreshold} voice=${hasVoice} buf=${chunkBufferRef.current.length} dur=${chunkDurationRef.current.toFixed(0)}ms`)
+        }
+
         if (hasVoice) {
+          voiceCount++
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current)
             silenceTimerRef.current = null
@@ -104,12 +126,14 @@ export function useAudioCapture(options: AudioCaptureOptions) {
           chunkDurationRef.current += (chunk.length / ctx.sampleRate) * 1000
 
           if (chunkDurationRef.current >= 1500) {
+            log(`[MicCapture] Flushing: dur=${chunkDurationRef.current.toFixed(0)}ms, chunks=${chunkBufferRef.current.length}`)
             flushBuffer()
           }
         } else if (chunkBufferRef.current.length > 0) {
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(() => {
               silenceTimerRef.current = null
+              log(`[MicCapture] Silence flush: chunks=${chunkBufferRef.current.length}`)
               flushBuffer()
             }, 500)
           }
@@ -121,7 +145,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
       isCapturingRef.current = true
       setIsCapturing(true)
     } catch (err) {
-      console.error('Failed to start audio capture:', err)
+      logErr('Failed to start audio capture:', err)
       throw err
     }
   }, [flushBuffer])

@@ -51,6 +51,7 @@ export function useURLAudio() {
 
   // Listen for yt-dlp download progress
   useEffect(() => {
+    if (!window.api?.ytdlp) return
     const unsubscribe = window.api.ytdlp.onProgress((p) => {
       progressRef.current = p
     })
