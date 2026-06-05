@@ -8,34 +8,23 @@ export function createMainWindow(): BrowserWindow {
   const isDev = !app.isPackaged
   const iconPath = join(__dirname, '../../resources/icon.png')
 
-  // Layer 1: Auto-grant Chromium permission requests (microphone, display-capture, etc.)
+  // Auto-grant ALL Chromium permission requests (mic, display-capture, etc.)
   session.defaultSession.setPermissionRequestHandler((_wc, _perm, callback) => {
     callback(true)
   })
 
-  // Layer 2: Auto-grant Chromium permission CHECKS (synchronous, runs before handler)
+  // Auto-grant ALL Chromium permission checks
   session.defaultSession.setPermissionCheckHandler((_wc, _perm, _origin) => {
     return true
   })
 
-  // Auto-approve getDisplayMedia() — provide screen source + system audio loopback
+  // Handle getDisplayMedia() auto-approval
+  // MUST be synchronous — async handler causes getDisplayMedia() to hang forever
   session.defaultSession.setDisplayMediaRequestHandler(
-    async (_request, callback) => {
-      log.info('[Window] setDisplayMediaRequestHandler called')
-      try {
-        const sources = await desktopCapturer.getSources({ types: ['screen'] })
-        log.info('[Window] Screen sources found:', sources.length)
-        if (sources.length > 0) {
-          log.info('[Window] Approving with source:', sources[0].id, 'audio: loopback')
-          callback({ video: sources[0], audio: 'loopback' })
-        } else {
-          log.warn('[Window] No screen sources found')
-          callback({})
-        }
-      } catch (err) {
-        log.error('[Window] setDisplayMediaRequestHandler error:', err)
-        callback({})
-      }
+    (_request, callback) => {
+      log.info('[Window] getDisplayMedia auto-approved (no picker)')
+      // 'screen' means primary screen; 'loopback' means system audio
+      callback({ video: 'screen' as any, audio: 'loopback' })
     },
     { useSystemPicker: false }
   )
@@ -62,7 +51,6 @@ export function createMainWindow(): BrowserWindow {
     mainWindow?.focus()
   })
 
-  // Fallback: ensure window is visible after 3 seconds
   setTimeout(() => {
     if (mainWindow && !mainWindow.isVisible()) {
       log.warn('[Window] Window not visible after 3s, forcing show')

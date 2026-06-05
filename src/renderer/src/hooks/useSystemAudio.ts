@@ -3,24 +3,16 @@ import { resampleAudio, detectVoiceActivity, pcmToWav } from '../services/audio-
 import { useSettingsStore } from '../store/settingsStore'
 import { useAppStore } from '../store/appStore'
 
-// Dual logger: console + terminal (via IPC)，确保无论哪个 DevTools 开着都能看到
-const log = (...args: unknown[]) => {
-  console.log(...args)
-  window.api?.logToMain('info', ...args)
-}
-const logErr = (...args: unknown[]) => {
-  console.error(...args)
-  window.api?.logToMain('error', ...args)
-}
+const log = (...args: unknown[]) => { console.log(...args); window.api?.logToMain('info', ...args) }
+const logErr = (...args: unknown[]) => { console.error(...args); window.api?.logToMain('error', ...args) }
 
 export interface SystemAudioOptions {
   onAudioChunk: (wavBlob: Blob) => void
 }
 
 /**
- * System audio capture using getDisplayMedia() + main-process setDisplayMediaRequestHandler.
- * The main process auto-approves via setDisplayMediaRequestHandler with useSystemPicker: false,
- * providing screen source + audio: 'loopback' for system audio capture.
+ * System audio capture via getDisplayMedia().
+ * Main process setDisplayMediaRequestHandler auto-approves with useSystemPicker: false.
  */
 export function useSystemAudioCapture(options: SystemAudioOptions) {
   const { onAudioChunk } = options
@@ -79,31 +71,20 @@ export function useSystemAudioCapture(options: SystemAudioOptions) {
     const vadThreshold = vadThresholdMap[vadSensitivity]
 
     try {
-      // Use getDisplayMedia() — the modern API for screen + system audio capture.
-      // Main process setDisplayMediaRequestHandler auto-approves with useSystemPicker: false,
-      // returning { video: source, audio: 'loopback' }.
       log('[SysAudio] Calling getDisplayMedia({ video: true, audio: true })...')
-
-      // Race with a timeout — getDisplayMedia can hang if window loses focus
-      const gdmPromise = navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-      } as any)
-
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('getDisplayMedia 超时 (15s)，窗口可能失去焦点')), 15000)
-      )
-
       let stream: MediaStream
       try {
-        stream = await Promise.race([gdmPromise, timeoutPromise])
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true as any,
+          audio: true as any,
+        })
         log('[SysAudio] getDisplayMedia SUCCESS, video tracks:', stream.getVideoTracks().length, 'audio tracks:', stream.getAudioTracks().length)
       } catch (e: any) {
         logErr(`[SysAudio] getDisplayMedia FAILED: ${e.name}: ${e.message}`, e)
         throw e
       }
 
-      // Discard video tracks — we only need audio
+      // Stop video tracks immediately — keep only audio
       stream.getVideoTracks().forEach((t) => {
         t.stop()
         stream.removeTrack(t)
@@ -112,7 +93,7 @@ export function useSystemAudioCapture(options: SystemAudioOptions) {
       const audioTracks = stream.getAudioTracks()
       if (audioTracks.length === 0) {
         stream.getTracks().forEach((t) => t.stop())
-        throw new Error('无法获取系统音频流，请检查系统音频输出设备')
+        throw new Error('No system audio stream available')
       }
 
       const audioTrack = audioTracks[0]
