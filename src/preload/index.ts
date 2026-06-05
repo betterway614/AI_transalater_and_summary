@@ -14,10 +14,11 @@ const api = {
   },
 
   ytdlp: {
-    extractAudio: (url: string): Promise<{ success: boolean; data?: ArrayBuffer; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.YTDLP_EXTRACT_AUDIO, url),
+    extractAudio: (url: string, partIndex?: number, cookiesPath?: string): Promise<{ success: boolean; data?: ArrayBuffer; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.YTDLP_EXTRACT_AUDIO, url, partIndex, cookiesPath),
     getInfo: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.YTDLP_GET_INFO, url),
     cancel: () => ipcRenderer.invoke(IPC_CHANNELS.YTDLP_CANCEL),
+    setCookies: (path: string | null) => ipcRenderer.invoke(IPC_CHANNELS.YTDLP_SET_COOKIES, path),
     onProgress: (callback: (progress: number) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, progress: number) => callback(progress)
       ipcRenderer.on(IPC_CHANNELS.YTDLP_PROGRESS, handler)

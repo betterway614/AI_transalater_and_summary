@@ -9,9 +9,10 @@ interface ElectronAPI {
     set: (key: string, value: unknown) => Promise<void>
   }
   ytdlp: {
-    extractAudio: (url: string) => Promise<{ success: boolean; data?: ArrayBuffer; error?: string }>
-    getInfo: (url: string) => Promise<unknown>
+    extractAudio: (url: string, partIndex?: number, cookiesPath?: string) => Promise<{ success: boolean; data?: ArrayBuffer; error?: string }>
+    getInfo: (url: string) => Promise<import('@shared/types').VideoInfo | { error: string }>
     cancel: () => Promise<void>
+    setCookies: (path: string | null) => Promise<void>
     onProgress: (callback: (progress: number) => void) => () => void
   }
   systemAudio: {

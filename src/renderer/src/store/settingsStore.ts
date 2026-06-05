@@ -9,6 +9,7 @@ interface SettingsState {
   updateAI: (partial: Partial<AppSettings['ai']>) => void
   updateSubtitle: (partial: Partial<AppSettings['subtitle']>) => void
   updateAudio: (partial: Partial<AppSettings['audio']>) => void
+  updateGeneral: (partial: Partial<AppSettings['general']>) => void
   loadSettings: (settings: AppSettings) => void
   init: () => Promise<void>
 }
@@ -49,13 +50,25 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       return { settings: next }
     }),
 
+  updateGeneral: (partial) =>
+    set((state) => {
+      const next = { ...state.settings, general: { ...state.settings.general, ...partial } }
+      persist(next)
+      return { settings: next }
+    }),
+
   loadSettings: (settings) => set({ settings, isLoaded: true }),
 
   init: async () => {
     try {
       const saved = (await window.api?.store.get('settings')) as AppSettings | undefined
       if (saved) {
-        set({ settings: { ...DEFAULT_SETTINGS, ...saved }, isLoaded: true })
+        const merged = { ...DEFAULT_SETTINGS, ...saved }
+        set({ settings: merged, isLoaded: true })
+        // Sync cookies path to main process on startup
+        if (merged.general.cookiesPath) {
+          window.api?.ytdlp.setCookies(merged.general.cookiesPath)
+        }
       } else {
         set({ isLoaded: true })
       }

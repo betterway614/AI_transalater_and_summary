@@ -13,6 +13,7 @@ export default function SettingsPage() {
   const updateAI = useSettingsStore((s) => s.updateAI)
   const updateSubtitle = useSettingsStore((s) => s.updateSubtitle)
   const updateAudio = useSettingsStore((s) => s.updateAudio)
+  const updateGeneral = useSettingsStore((s) => s.updateGeneral)
 
   const [showWhisperKey, setShowWhisperKey] = useState(false)
   const [showTranslatorKey, setShowTranslatorKey] = useState(false)
@@ -311,7 +312,7 @@ export default function SettingsPage() {
       </Paper>
 
       {/* 音频设置 */}
-      <Paper sx={{ p: 2 }}>
+      <Paper sx={{ p: 2, mb: 2 }}>
         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
           音频设置
         </Typography>
@@ -329,6 +330,30 @@ export default function SettingsPage() {
             <MenuItem value="high">高（检测轻微语音）</MenuItem>
           </Select>
         </FormControl>
+      </Paper>
+
+      {/* 视频平台设置 */}
+      <Paper sx={{ p: 2 }}>
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
+          视频平台设置
+        </Typography>
+
+        <Alert severity="info" sx={{ mb: 2 }}>
+          B站等平台部分视频需要登录。使用浏览器扩展 "Get cookies.txt LOCALLY" 导出 cookies 文件，在此配置路径。
+        </Alert>
+
+        <TextField
+          fullWidth
+          size="small"
+          label="Cookies 文件路径"
+          value={settings.general.cookiesPath || ''}
+          onChange={(e) => {
+            updateGeneral({ cookiesPath: e.target.value || undefined })
+            window.api.ytdlp.setCookies(e.target.value || null)
+          }}
+          placeholder="C:\Users\...\cookies.txt"
+          helperText="留空则不使用 cookies。支持 Netscape 格式的 cookies.txt 文件。"
+        />
       </Paper>
     </Box>
   )

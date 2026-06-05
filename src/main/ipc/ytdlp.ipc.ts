@@ -5,10 +5,10 @@ import { YtdlpService } from '../services/ytdlp.service'
 const ytdlpService = new YtdlpService()
 
 export function registerYtdlpIpc(): void {
-  ipcMain.handle(IPC_CHANNELS.YTDLP_EXTRACT_AUDIO, async (event, url: string) => {
+  ipcMain.handle(IPC_CHANNELS.YTDLP_EXTRACT_AUDIO, async (event, url: string, partIndex?: number, cookiesPath?: string) => {
     try {
       const audioBuffer = await ytdlpService.extractAudio(
-        url,
+        { url, partIndex, cookiesPath },
         (progress) => {
           event.sender.send(IPC_CHANNELS.YTDLP_PROGRESS, progress)
         }
@@ -29,5 +29,9 @@ export function registerYtdlpIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.YTDLP_CANCEL, async () => {
     ytdlpService.cancel()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.YTDLP_SET_COOKIES, async (_event, path: string | null) => {
+    ytdlpService.setCookies(path)
   })
 }

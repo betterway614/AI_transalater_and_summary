@@ -1,18 +1,49 @@
-import { TextField, Button, Paper } from '@mui/material'
+import { TextField, Button, Paper, Select, MenuItem, FormControl, InputLabel, Chip, Typography, Box, CircularProgress } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
-import { useState } from 'react'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import { useState, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useURLAudio } from '../../hooks/useURLAudio'
+import { useSettingsStore } from '../../store/settingsStore'
+import type { VideoInfo } from '@shared/types'
 
 export default function URLInputPanel() {
   const [url, setUrl] = useState('')
+  const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
+  const [selectedPart, setSelectedPart] = useState(0)
+  const [loadingInfo, setLoadingInfo] = useState(false)
+  const [infoError, setInfoError] = useState('')
+
   const status = useAppStore((s) => s.status)
   const mode = useAppStore((s) => s.mode)
   const stopTranslation = useAppStore((s) => s.stopTranslation)
+  const cookiesPath = useSettingsStore((s) => s.settings.general.cookiesPath)
   const { start, stop } = useURLAudio()
 
   const isRunning = status !== 'idle' && status !== 'error'
+
+  const fetchInfo = useCallback(async () => {
+    if (!url.trim()) return
+    setLoadingInfo(true)
+    setInfoError('')
+    setVideoInfo(null)
+
+    // Set cookies before fetching info
+    if (cookiesPath) {
+      await window.api.ytdlp.setCookies(cookiesPath)
+    }
+
+    const result = await window.api.ytdlp.getInfo(url.trim())
+    setLoadingInfo(false)
+
+    if ('error' in result) {
+      setInfoError(result.error)
+    } else {
+      setVideoInfo(result as VideoInfo)
+      setSelectedPart(0)
+    }
+  }, [url, cookiesPath])
 
   const handleToggle = () => {
     if (isRunning) {
@@ -20,17 +51,23 @@ export default function URLInputPanel() {
       stopTranslation()
     } else {
       if (!url.trim()) return
-      start(url.trim(), mode)
+      start(url.trim(), mode, {
+        partIndex: videoInfo && videoInfo.partCount > 1 ? selectedPart : undefined,
+        cookiesPath
+      })
     }
+  }
+
+  const formatDuration = (sec: number) => {
+    const m = Math.floor(sec / 60)
+    const s = Math.floor(sec % 60)
+    return `${m}:${s.toString().padStart(2, '0')}`
   }
 
   return (
     <Paper
       elevation={0}
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1,
         p: 1.5,
         bgcolor: 'background.paper',
         borderRadius: 2,
@@ -38,33 +75,76 @@ export default function URLInputPanel() {
         borderColor: 'divider'
       }}
     >
-      <TextField
-        fullWidth
-        size="small"
-        placeholder="请输入视频 URL（YouTube、B站等）..."
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        disabled={isRunning}
-        sx={{
-          '& .MuiOutlinedInput-root': {
-            borderRadius: 1.5
-          }
-        }}
-      />
-      <Button
-        variant="contained"
-        onClick={handleToggle}
-        startIcon={isRunning ? <StopIcon /> : <PlayArrowIcon />}
-        color={isRunning ? 'error' : 'primary'}
-        sx={{
-          minWidth: 100,
-          borderRadius: 1.5,
-          textTransform: 'none',
-          fontWeight: 600
-        }}
-      >
-        {isRunning ? '停止' : '开始'}
-      </Button>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <TextField
+          fullWidth
+          size="small"
+          placeholder="请输入视频 URL（YouTube、B站等）..."
+          value={url}
+          onChange={(e) => { setUrl(e.target.value); setVideoInfo(null); setInfoError('') }}
+          disabled={isRunning}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !isRunning) fetchInfo() }}
+          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}
+        />
+        <Button
+          size="small"
+          onClick={fetchInfo}
+          disabled={isRunning || loadingInfo || !url.trim()}
+          sx={{ minWidth: 40, px: 1 }}
+        >
+          {loadingInfo ? <CircularProgress size={18} /> : <InfoOutlinedIcon fontSize="small" />}
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleToggle}
+          startIcon={isRunning ? <StopIcon /> : <PlayArrowIcon />}
+          color={isRunning ? 'error' : 'primary'}
+          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
+        >
+          {isRunning ? '停止' : '开始'}
+        </Button>
+      </Box>
+
+      {infoError && (
+        <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block', whiteSpace: 'pre-line' }}>
+          {infoError}
+        </Typography>
+      )}
+
+      {videoInfo && (
+        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Chip label={videoInfo.siteName} size="small" color="primary" variant="outlined" />
+          <Typography variant="caption" noWrap sx={{ flex: 1 }}>
+            {videoInfo.title}
+          </Typography>
+          {videoInfo.uploader && (
+            <Typography variant="caption" color="text.secondary">
+              {videoInfo.uploader}
+            </Typography>
+          )}
+          <Typography variant="caption" color="text.secondary">
+            {formatDuration(videoInfo.duration)}
+          </Typography>
+
+          {videoInfo.partCount > 1 && (
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel>分P选择</InputLabel>
+              <Select
+                value={selectedPart}
+                label="分P选择"
+                onChange={(e) => setSelectedPart(Number(e.target.value))}
+              >
+                {videoInfo.parts.map((part) => (
+                  <MenuItem key={part.index} value={part.index}>
+                    P{part.index + 1}: {part.title.length > 30 ? part.title.slice(0, 30) + '...' : part.title}
+                    {' '}({formatDuration(part.duration)})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </Box>
+      )}
     </Paper>
   )
 }

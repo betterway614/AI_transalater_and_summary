@@ -4,6 +4,7 @@ export const IPC_CHANNELS = {
   YTDLP_GET_INFO: 'ytdlp:get-info',
   YTDLP_CANCEL: 'ytdlp:cancel',
   YTDLP_PROGRESS: 'ytdlp:progress',
+  YTDLP_SET_COOKIES: 'ytdlp:set-cookies',
 
   // 系统音频
   SYSTEM_AUDIO_START: 'system-audio:start',

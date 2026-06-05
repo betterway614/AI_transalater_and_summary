@@ -51,13 +51,13 @@ export function useURLAudio() {
     return unsubscribe
   }, [])
 
-  const start = useCallback(async (url: string, mode: InputMode) => {
+  const start = useCallback(async (url: string, mode: InputMode, options?: { partIndex?: number; cookiesPath?: string }) => {
     cancelledRef.current = false
     progressRef.current = 0
     setStatus('connecting')
 
     // Step 1: Extract audio (progress via onProgress listener)
-    const result = await window.api.ytdlp.extractAudio(url)
+    const result = await window.api.ytdlp.extractAudio(url, options?.partIndex, options?.cookiesPath)
     if (cancelledRef.current) return
 
     if (!result.success || !result.data) {
