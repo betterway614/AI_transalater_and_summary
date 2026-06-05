@@ -1,13 +1,8 @@
 import { Box, FormControl, InputLabel, Select, MenuItem, Button, Paper, Typography } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
-
-const mockDevices = [
-  { id: 'default', name: '默认麦克风' },
-  { id: 'mic-1', name: '内置麦克风' },
-  { id: 'mic-2', name: 'USB 麦克风' }
-]
 
 const languages = [
   { code: 'en', name: '英文' },
@@ -21,8 +16,31 @@ export default function DeviceSelector() {
   const status = useAppStore((s) => s.status)
   const startTranslation = useAppStore((s) => s.startTranslation)
   const stopTranslation = useAppStore((s) => s.stopTranslation)
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
 
   const isRunning = status !== 'idle' && status !== 'error'
+
+  useEffect(() => {
+    if (mode === 'microphone') {
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((all) => setDevices(all.filter((d) => d.kind === 'audioinput')))
+        .catch(() => {})
+    }
+  }, [mode])
+
+  // Re-fetch when permissions change
+  useEffect(() => {
+    if (mode !== 'microphone') return
+    const handler = () => {
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((all) => setDevices(all.filter((d) => d.kind === 'audioinput')))
+        .catch(() => {})
+    }
+    navigator.mediaDevices.addEventListener('devicechange', handler)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', handler)
+  }, [mode])
 
   const handleToggle = () => {
     if (isRunning) {
@@ -48,9 +66,10 @@ export default function DeviceSelector() {
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <InputLabel>麦克风</InputLabel>
             <Select label="麦克风" defaultValue="default">
-              {mockDevices.map((d) => (
-                <MenuItem key={d.id} value={d.id}>
-                  {d.name}
+              <MenuItem value="default">默认麦克风</MenuItem>
+              {devices.map((d) => (
+                <MenuItem key={d.deviceId} value={d.deviceId}>
+                  {d.label || `麦克风 ${d.deviceId.slice(0, 8)}`}
                 </MenuItem>
               ))}
             </Select>
@@ -94,12 +113,7 @@ export default function DeviceSelector() {
           onClick={handleToggle}
           startIcon={isRunning ? <StopIcon /> : <PlayArrowIcon />}
           color={isRunning ? 'error' : 'primary'}
-          sx={{
-            minWidth: 100,
-            borderRadius: 1.5,
-            textTransform: 'none',
-            fontWeight: 600
-          }}
+          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600 }}
         >
           {isRunning ? '停止' : '开始'}
         </Button>

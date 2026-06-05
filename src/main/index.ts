@@ -5,6 +5,7 @@ import { registerYtdlpIpc } from './ipc/ytdlp.ipc'
 import { registerAudioIpc } from './ipc/audio.ipc'
 import { registerExportIpc } from './ipc/export.ipc'
 import { registerStoreIpc } from './ipc/store.ipc'
+import { createTray } from './tray'
 
 app.whenReady().then(() => {
   const isDev = !app.isPackaged
@@ -22,6 +23,7 @@ app.whenReady().then(() => {
   }
 
   createMainWindow()
+  createTray(getMainWindow)
 
   // Register IPC handlers
   registerYtdlpIpc()

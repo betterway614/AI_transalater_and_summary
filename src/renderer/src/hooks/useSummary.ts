@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useSubtitleStore } from '../store/subtitleStore'
+import { useSettingsStore } from '../store/settingsStore'
+import { DeepSeekService } from '../services/deepseek.service'
 
 export function useSummary() {
   const [summary, setSummary] = useState<string | null>(null)
@@ -12,48 +14,30 @@ export function useSummary() {
 
     setIsGenerating(true)
     try {
-      const fullText = confirmedEntries.map((e) => `${e.originalText}\n${e.translatedText}`).join('\n\n')
-
-      // Use DeepSeek to generate summary
-      const settings = (await window.api?.store.get('settings')) as any
-      const apiKey = settings?.ai?.translator?.apiKey || ''
-      const baseUrl = settings?.ai?.translator?.baseUrl || 'https://api.deepseek.com'
-      const model = settings?.ai?.translator?.model || 'deepseek-chat'
+      const settings = useSettingsStore.getState().settings
+      const { apiKey, baseUrl, model } = settings.ai.translator
 
       if (!apiKey) {
-        setSummary('请先在设置中配置 API Key')
+        setSummary('请先在设置中配置 DeepSeek API Key')
         return
       }
 
-      const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a professional summarizer. Create a structured Markdown summary in Chinese with clear headings and bullet points.'
-            },
-            {
-              role: 'user',
-              content: `请对以下翻译内容生成结构化摘要（Markdown格式，使用三级标题）：\n\n${fullText}`
-            }
-          ],
-          temperature: 0.3,
-          max_tokens: 2048
-        })
-      })
+      const deepseek = new DeepSeekService({ apiKey, model, baseUrl })
 
-      const data = await response.json()
-      const content = data.choices?.[0]?.message?.content || '生成失败'
-      setSummary(content)
+      const fullText = confirmedEntries
+        .map((e) => `${e.originalText}\n${e.translatedText}`)
+        .join('\n\n')
+
+      let result = ''
+      for await (const chunk of deepseek.streamingTranslate(
+        `请对以下翻译内容生成结构化摘要（Markdown格式，使用三级标题）：\n\n${fullText}`
+      )) {
+        result = chunk.text
+      }
+      setSummary(result)
     } catch (err) {
       console.error('Summary generation error:', err)
-      setSummary('生成摘要时出错')
+      setSummary('生成摘要时出错，请检查 API 配置')
     } finally {
       setIsGenerating(false)
     }

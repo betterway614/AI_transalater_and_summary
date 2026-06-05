@@ -1,8 +1,9 @@
 import { useCallback } from 'react'
 import { useSubtitleStore } from '../store/subtitleStore'
 import { useAppStore } from '../store/appStore'
-import { useWhisperASR } from './useWhisperASR'
-import { useDeepSeekTranslate } from './useDeepSeekTranslate'
+import { useSettingsStore } from '../store/settingsStore'
+import { WhisperService } from '../services/whisper.service'
+import { DeepSeekService } from '../services/deepseek.service'
 import type { InputMode } from '@shared/types'
 
 export function useSubtitle() {
@@ -11,17 +12,25 @@ export function useSubtitle() {
   const updateEntry = useSubtitleStore((s) => s.updateEntry)
   const createEntry = useSubtitleStore((s) => s.createEntry)
   const mode = useAppStore((s) => s.mode)
+  const isPaused = useAppStore((s) => s.isPaused)
   const setStatus = useAppStore((s) => s.setStatus)
-  const { transcribe } = useWhisperASR()
-  const { translate } = useDeepSeekTranslate()
 
   const processAudioChunk = useCallback(
     async (audioBlob: Blob, currentMode: InputMode = mode) => {
+      if (isPaused) return
+
+      const settings = useSettingsStore.getState().settings
+
       try {
         setStatus('listening')
 
-        // Step 1: ASR - transcribe audio to text
-        const text = await transcribe(audioBlob)
+        // Step 1: ASR
+        const whisper = new WhisperService({
+          apiKey: settings.ai.whisper.apiKey,
+          model: settings.ai.whisper.model,
+          language: settings.ai.whisper.language
+        })
+        const text = await whisper.transcribe(audioBlob)
         if (!text.trim()) return
 
         // Step 2: Create subtitle entry
@@ -30,19 +39,38 @@ export function useSubtitle() {
         setStatus('translating')
 
         // Step 3: Translate with streaming
-        await translate(text, (partial) => {
-          updateEntry(entry.id, partial)
+        const deepseek = new DeepSeekService({
+          apiKey: settings.ai.translator.apiKey,
+          model: settings.ai.translator.model,
+          baseUrl: settings.ai.translator.baseUrl
         })
 
-        // Mark as final
-        replaceLastEntry({ ...entry, isFinal: true, translatedText: useSubtitleStore.getState().entries.find(e => e.id === entry.id)?.translatedText || '' })
+        const context = useSubtitleStore
+          .getState()
+          .entries.filter((e) => e.isFinal)
+          .slice(-3)
+          .map((e) => e.originalText)
+
+        let finalTranslation = ''
+        for await (const chunk of deepseek.streamingTranslate(text, context)) {
+          finalTranslation = chunk.text
+          updateEntry(entry.id, finalTranslation)
+        }
+
+        // Step 4: Mark as final
+        const currentEntry = useSubtitleStore.getState().entries.find((e) => e.id === entry.id)
+        replaceLastEntry({
+          ...entry,
+          isFinal: true,
+          translatedText: currentEntry?.translatedText || finalTranslation
+        })
         setStatus('listening')
       } catch (err) {
         console.error('Process audio chunk error:', err)
         setStatus('error')
       }
     },
-    [mode, transcribe, translate, addEntry, replaceLastEntry, updateEntry, createEntry, setStatus]
+    [mode, isPaused, addEntry, replaceLastEntry, updateEntry, createEntry, setStatus]
   )
 
   return { processAudioChunk }
