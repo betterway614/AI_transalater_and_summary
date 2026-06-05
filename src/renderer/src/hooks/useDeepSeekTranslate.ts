@@ -9,7 +9,7 @@ export function useDeepSeekTranslate() {
   const serviceRef = useRef<DeepSeekService | null>(null)
 
   const getService = useCallback(() => {
-    if (!serviceRef.current || serviceRef.current['apiKey'] !== translatorConfig.apiKey) {
+    if (!serviceRef.current || serviceRef.current['apiKey'] !== translatorConfig.apiKey || serviceRef.current['baseUrl'] !== translatorConfig.baseUrl || serviceRef.current['model'] !== translatorConfig.model) {
       serviceRef.current = new DeepSeekService({
         apiKey: translatorConfig.apiKey,
         model: translatorConfig.model,

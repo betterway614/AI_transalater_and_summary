@@ -1,19 +1,20 @@
-const WHISPER_API_URL = 'https://api.openai.com/v1/audio/transcriptions'
-
 export interface WhisperConfig {
   apiKey: string
   model?: string
+  baseUrl?: string
   language?: string
 }
 
 export class WhisperService {
   private apiKey: string
   private model: string
+  private baseUrl: string
   private language: string
 
   constructor(config: WhisperConfig) {
     this.apiKey = config.apiKey
     this.model = config.model || 'whisper-1'
+    this.baseUrl = config.baseUrl || 'https://api.openai.com'
     this.language = config.language || 'en'
   }
 
@@ -28,7 +29,7 @@ export class WhisperService {
     formData.append('language', this.language)
     formData.append('response_format', 'text')
 
-    const response = await fetch(WHISPER_API_URL, {
+    const response = await fetch(`${this.baseUrl}/v1/audio/transcriptions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.apiKey}`

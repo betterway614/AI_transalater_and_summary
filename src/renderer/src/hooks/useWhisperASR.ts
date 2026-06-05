@@ -7,10 +7,11 @@ export function useWhisperASR() {
   const serviceRef = useRef<WhisperService | null>(null)
 
   const getService = useCallback(() => {
-    if (!serviceRef.current || serviceRef.current['apiKey'] !== whisperConfig.apiKey) {
+    if (!serviceRef.current || serviceRef.current['apiKey'] !== whisperConfig.apiKey || serviceRef.current['baseUrl'] !== whisperConfig.baseUrl) {
       serviceRef.current = new WhisperService({
         apiKey: whisperConfig.apiKey,
         model: whisperConfig.model,
+        baseUrl: whisperConfig.baseUrl,
         language: whisperConfig.language
       })
     }

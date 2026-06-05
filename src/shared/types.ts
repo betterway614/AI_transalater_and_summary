@@ -31,13 +31,14 @@ export interface TranslationSession {
 // ===== AI 引擎配置 =====
 export interface AIEngineConfig {
   whisper: {
-    provider: 'openai';
+    provider: string;
     apiKey: string;
     model: string;
+    baseUrl: string;
     language?: string;
   };
   translator: {
-    provider: 'deepseek';
+    provider: string;
     apiKey: string;
     model: string;
     baseUrl: string;
@@ -82,6 +83,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
       provider: 'openai',
       apiKey: '',
       model: 'whisper-1',
+      baseUrl: 'https://api.openai.com',
     },
     translator: {
       provider: 'deepseek',
