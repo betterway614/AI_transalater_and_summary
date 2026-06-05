@@ -15,7 +15,21 @@ export interface SubtitleEntry {
   mode: InputMode;
 }
 
-// ===== 翻译会话 =====
+// ===== 视频信息 =====
+export interface VideoPart {
+  index: number;
+  title: string;
+  duration: number;
+}
+
+export interface VideoInfo {
+  title: string;
+  duration: number;
+  uploader: string;
+  partCount: number;
+  parts: VideoPart[];
+  siteName: string;
+}
 export interface TranslationSession {
   id: string;
   mode: InputMode;
@@ -66,6 +80,7 @@ export interface AudioSettings {
 export interface GeneralSettings {
   theme: 'light' | 'dark' | 'system';
   language: string;
+  cookiesPath?: string;
 }
 
 // ===== 应用设置 =====
