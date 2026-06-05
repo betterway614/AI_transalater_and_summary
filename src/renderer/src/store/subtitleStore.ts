@@ -6,6 +6,7 @@ interface SubtitleState {
   addEntry: (entry: SubtitleEntry) => void
   updateEntry: (id: string, text: string) => void
   replaceLastEntry: (entry: SubtitleEntry) => void
+  markFinal: (id: string, translatedText: string) => void
   clearEntries: () => void
   createEntry: (originalText: string, mode: InputMode) => SubtitleEntry
 }
@@ -36,6 +37,13 @@ export const useSubtitleStore = create<SubtitleState>((set) => ({
       }
       return { entries }
     }),
+
+  markFinal: (id, translatedText) =>
+    set((state) => ({
+      entries: state.entries.map((e) =>
+        e.id === id ? { ...e, isFinal: true, translatedText } : e
+      )
+    })),
 
   clearEntries: () => set({ entries: [] }),
 

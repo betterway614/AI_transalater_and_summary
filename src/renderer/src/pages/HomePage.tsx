@@ -1,5 +1,5 @@
 import { Box } from '@mui/material'
-import { useCallback, useRef } from 'react'
+import { useCallback } from 'react'
 import ModeTabs from '../components/ModeSelector/ModeTabs'
 import URLInputPanel from '../components/URLInput/URLInputPanel'
 import DeviceSelector from '../components/DeviceSelector/DeviceSelector'
@@ -10,44 +10,49 @@ import SummaryPanel from '../components/Summary/SummaryPanel'
 import { useAppStore } from '../store/appStore'
 import { useSubtitle } from '../hooks/useSubtitle'
 import { useAudioCapture } from '../hooks/useAudioCapture'
+import { useSystemAudio } from '../hooks/useSystemAudio'
 
 export default function HomePage() {
   const mode = useAppStore((s) => s.mode)
-  const status = useAppStore((s) => s.status)
   const showFloating = useAppStore((s) => s.showFloating)
   const startTranslation = useAppStore((s) => s.startTranslation)
   const stopTranslation = useAppStore((s) => s.stopTranslation)
   const { processAudioChunk } = useSubtitle()
 
+  // Microphone capture
   const handleAudioChunk = useCallback(
-    (blob: Blob) => {
-      processAudioChunk(blob, mode)
-    },
+    (blob: Blob) => { processAudioChunk(blob, mode) },
     [processAudioChunk, mode]
   )
-
-  const { start: startCapture, stop: stopCapture, isCapturing } = useAudioCapture({
+  const { start: startMicCapture, stop: stopMicCapture } = useAudioCapture({
     onAudioChunk: handleAudioChunk
   })
+
+  // System audio capture
+  const { start: startSystemAudio, stop: stopSystemAudio } = useSystemAudio()
 
   const handleStart = useCallback(async () => {
     startTranslation()
     try {
-      await startCapture()
+      if (mode === 'system-audio') {
+        await startSystemAudio()
+      } else {
+        await startMicCapture()
+      }
     } catch (err) {
       console.error('Failed to start audio capture:', err)
       stopTranslation()
     }
-  }, [startTranslation, startCapture, stopTranslation])
+  }, [mode, startTranslation, startMicCapture, startSystemAudio, stopTranslation])
 
   const handleStop = useCallback(() => {
-    stopCapture()
+    if (mode === 'system-audio') {
+      stopSystemAudio()
+    } else {
+      stopMicCapture()
+    }
     stopTranslation()
-  }, [stopCapture, stopTranslation])
-
-  // Expose start/stop to child components via a ref-based callback pattern
-  const controlRef = useRef({ handleStart, handleStop })
-  controlRef.current = { handleStart, handleStop }
+  }, [mode, stopMicCapture, stopSystemAudio, stopTranslation])
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2, gap: 2 }}>
@@ -59,7 +64,7 @@ export default function HomePage() {
       )}
       <SubtitlePanel />
       <SummaryPanel />
-      <ControlBar onStart={handleStart} onStop={handleStop} />
+      <ControlBar onStop={handleStop} />
       {showFloating && <FloatingSubtitle />}
     </Box>
   )

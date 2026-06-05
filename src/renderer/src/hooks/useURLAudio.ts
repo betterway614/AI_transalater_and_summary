@@ -16,29 +16,35 @@ export function useURLAudio() {
   const addEntry = useSubtitleStore((s) => s.addEntry)
   const createEntry = useSubtitleStore((s) => s.createEntry)
   const updateEntry = useSubtitleStore((s) => s.updateEntry)
-  const replaceLastEntry = useSubtitleStore((s) => s.replaceLastEntry)
+  const markFinal = useSubtitleStore((s) => s.markFinal)
 
   const whisperRef = useRef<WhisperService | null>(null)
   const deepseekRef = useRef<DeepSeekService | null>(null)
+  const whisperFpRef = useRef('')
+  const deepseekFpRef = useRef('')
   const cancelledRef = useRef(false)
   const progressRef = useRef(0)
 
   const getWhisper = useCallback(() => {
     const s = useSettingsStore.getState().settings.ai.whisper
-    if (!whisperRef.current || whisperRef.current['apiKey'] !== s.apiKey) {
+    const fp = `${s.apiKey}|${s.model}|${s.baseUrl}|${s.language}`
+    if (!whisperRef.current || whisperFpRef.current !== fp) {
       whisperRef.current = new WhisperService({
         apiKey: s.apiKey, model: s.model, baseUrl: s.baseUrl, language: s.language
       })
+      whisperFpRef.current = fp
     }
     return whisperRef.current
   }, [])
 
   const getDeepSeek = useCallback(() => {
     const s = useSettingsStore.getState().settings.ai.translator
-    if (!deepseekRef.current || deepseekRef.current['apiKey'] !== s.apiKey) {
+    const fp = `${s.apiKey}|${s.model}|${s.baseUrl}`
+    if (!deepseekRef.current || deepseekFpRef.current !== fp) {
       deepseekRef.current = new DeepSeekService({
         apiKey: s.apiKey, model: s.model, baseUrl: s.baseUrl
       })
+      deepseekFpRef.current = fp
     }
     return deepseekRef.current
   }, [])
@@ -51,13 +57,16 @@ export function useURLAudio() {
     return unsubscribe
   }, [])
 
-  const start = useCallback(async (url: string, mode: InputMode, options?: { partIndex?: number; cookiesPath?: string }) => {
+  const start = useCallback(async (url: string, mode: InputMode, options?: { partIndex?: number }) => {
     cancelledRef.current = false
     progressRef.current = 0
     setStatus('connecting')
 
+    // Auto-detect platform cookies
+    const cookiesPath = await window.api.auth.detectPlatform(url)
+
     // Step 1: Extract audio (progress via onProgress listener)
-    const result = await window.api.ytdlp.extractAudio(url, options?.partIndex, options?.cookiesPath)
+    const result = await window.api.ytdlp.extractAudio(url, options?.partIndex, cookiesPath || undefined)
     if (cancelledRef.current) return
 
     if (!result.success || !result.data) {
@@ -96,7 +105,7 @@ export function useURLAudio() {
     if (!cancelledRef.current) {
       setStatus('idle')
     }
-  }, [setStatus, addEntry, createEntry, getWhisper, getDeepSeek, updateEntry, replaceLastEntry])
+  }, [setStatus, addEntry, createEntry, getWhisper, getDeepSeek, updateEntry, markFinal])
 
   const translateEntry = useCallback(async (entry: SubtitleEntry) => {
     const deepseek = getDeepSeek()
@@ -112,8 +121,8 @@ export function useURLAudio() {
       updateEntry(entry.id, finalTranslation)
     }
 
-    replaceLastEntry({ ...entry, isFinal: true, translatedText: finalTranslation })
-  }, [getDeepSeek, updateEntry, replaceLastEntry])
+    markFinal(entry.id, finalTranslation)
+  }, [getDeepSeek, updateEntry, markFinal])
 
   const stop = useCallback(() => {
     cancelledRef.current = true

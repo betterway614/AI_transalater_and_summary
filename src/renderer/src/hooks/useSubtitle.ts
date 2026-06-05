@@ -7,51 +7,53 @@ import { DeepSeekService } from '../services/deepseek.service'
 import type { InputMode, SubtitleEntry } from '@shared/types'
 
 /**
- * Optimized subtitle pipeline with:
- * - Overlapping ASR/translation (next chunk starts ASR while current translates)
- * - Throttled UI updates (max 1 per 100ms during streaming)
- * - Minimal translation context (1 entry for lower TTFT)
- * - Service instance reuse via refs
+ * Optimized subtitle pipeline:
+ * - Overlapping ASR/translation (fire-and-forget)
+ * - Throttled UI updates (100ms)
+ * - Service cache invalidated on settings change
+ * - Translation uses entry ID for correct replace (not "last entry")
  */
 
 export function useSubtitle() {
   const addEntry = useSubtitleStore((s) => s.addEntry)
   const updateEntry = useSubtitleStore((s) => s.updateEntry)
-  const replaceLastEntry = useSubtitleStore((s) => s.replaceLastEntry)
+  const markFinal = useSubtitleStore((s) => s.markFinal)
   const createEntry = useSubtitleStore((s) => s.createEntry)
   const mode = useAppStore((s) => s.mode)
   const isPaused = useAppStore((s) => s.isPaused)
   const setStatus = useAppStore((s) => s.setStatus)
 
+  // Service cache with settings fingerprint for invalidation
   const whisperRef = useRef<WhisperService | null>(null)
   const deepseekRef = useRef<DeepSeekService | null>(null)
+  const whisperFingerprintRef = useRef('')
+  const deepseekFingerprintRef = useRef('')
 
   const getWhisper = useCallback(() => {
     const s = useSettingsStore.getState().settings.ai.whisper
-    if (!whisperRef.current) {
+    const fp = `${s.apiKey}|${s.model}|${s.baseUrl}|${s.language}`
+    if (!whisperRef.current || whisperFingerprintRef.current !== fp) {
       whisperRef.current = new WhisperService({
-        apiKey: s.apiKey,
-        model: s.model,
-        baseUrl: s.baseUrl,
-        language: s.language
+        apiKey: s.apiKey, model: s.model, baseUrl: s.baseUrl, language: s.language
       })
+      whisperFingerprintRef.current = fp
     }
     return whisperRef.current
   }, [])
 
   const getDeepSeek = useCallback(() => {
     const s = useSettingsStore.getState().settings.ai.translator
-    if (!deepseekRef.current) {
+    const fp = `${s.apiKey}|${s.model}|${s.baseUrl}`
+    if (!deepseekRef.current || deepseekFingerprintRef.current !== fp) {
       deepseekRef.current = new DeepSeekService({
-        apiKey: s.apiKey,
-        model: s.model,
-        baseUrl: s.baseUrl
+        apiKey: s.apiKey, model: s.model, baseUrl: s.baseUrl
       })
+      deepseekFingerprintRef.current = fp
     }
     return deepseekRef.current
   }, [])
 
-  // Throttle: track last update time per entry
+  // Throttle: max 1 UI update per 100ms per entry
   const lastUpdateRef = useRef<Map<string, number>>(new Map())
 
   const throttledUpdate = useCallback(
@@ -70,27 +72,30 @@ export function useSubtitle() {
     async (audioBlob: Blob, currentMode: InputMode = mode) => {
       if (isPaused) return
 
+      // Guard: don't start if no API key configured
+      const settings = useSettingsStore.getState().settings
+      if (!settings.ai.whisper.apiKey) {
+        console.warn('Whisper API key not configured')
+        return
+      }
+
       try {
         setStatus('listening')
 
-        // Stage 1: ASR (uses cached service instance)
+        // Stage 1: ASR
         const whisper = getWhisper()
         const text = await whisper.transcribe(audioBlob)
         if (!text.trim()) return
 
-        // Stage 2: Create subtitle entry immediately
+        // Stage 2: Create subtitle entry
         const entry = createEntry(text, currentMode)
         addEntry(entry)
-        setStatus('translating')
 
-        // Stage 3: Streaming translation (non-blocking for next chunk)
-        // Fire-and-forget: the translation runs independently
+        // Stage 3: Fire-and-forget translation (non-blocking for next chunk)
         translateEntry(entry).catch((err) => {
           console.error('Translation error:', err)
           setStatus('error')
         })
-
-        setStatus('listening')
       } catch (err) {
         console.error('ASR error:', err)
         setStatus('error')
@@ -99,7 +104,7 @@ export function useSubtitle() {
     [mode, isPaused, getWhisper, addEntry, createEntry, setStatus]
   )
 
-  // Separate async function for translation — doesn't block processAudioChunk
+  // Separate async function for translation — uses entry ID for correct replace
   const translateEntry = useCallback(
     async (entry: SubtitleEntry) => {
       const deepseek = getDeepSeek()
@@ -114,23 +119,15 @@ export function useSubtitle() {
       let finalTranslation = ''
       for await (const chunk of deepseek.streamingTranslate(entry.originalText, context)) {
         finalTranslation = chunk.text
-        // Throttled UI updates (max 10/sec)
         throttledUpdate(entry.id, finalTranslation)
       }
 
-      // Force final update
+      // Force final update then mark as final by ID
       throttledUpdate(entry.id, finalTranslation, true)
-
-      // Mark as final
-      const currentEntry = useSubtitleStore.getState().entries.find((e) => e.id === entry.id)
-      replaceLastEntry({
-        ...entry,
-        isFinal: true,
-        translatedText: currentEntry?.translatedText || finalTranslation
-      })
+      markFinal(entry.id, finalTranslation)
       lastUpdateRef.current.delete(entry.id)
     },
-    [getDeepSeek, throttledUpdate, replaceLastEntry]
+    [getDeepSeek, throttledUpdate, markFinal]
   )
 
   return { processAudioChunk }

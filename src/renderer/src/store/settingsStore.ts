@@ -63,12 +63,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       const saved = (await window.api?.store.get('settings')) as AppSettings | undefined
       if (saved) {
-        const merged = { ...DEFAULT_SETTINGS, ...saved }
-        set({ settings: merged, isLoaded: true })
-        // Sync cookies path to main process on startup
-        if (merged.general.cookiesPath) {
-          window.api?.ytdlp.setCookies(merged.general.cookiesPath)
-        }
+        set({ settings: { ...DEFAULT_SETTINGS, ...saved }, isLoaded: true })
       } else {
         set({ isLoaded: true })
       }

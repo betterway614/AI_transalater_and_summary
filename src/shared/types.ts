@@ -80,7 +80,6 @@ export interface AudioSettings {
 export interface GeneralSettings {
   theme: 'light' | 'dark' | 'system';
   language: string;
-  cookiesPath?: string;
 }
 
 // ===== 应用设置 =====

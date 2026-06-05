@@ -22,6 +22,14 @@ interface ElectronAPI {
     onData: (callback: (data: ArrayBuffer) => void) => () => void
   }
   exportMarkdown: (content: string, defaultName?: string) => Promise<string | null>
+  auth: {
+    login: (platformId: string) => Promise<{ success: boolean; error?: string }>
+    getLoggedIn: () => Promise<string[]>
+    getCookies: (platformId: string) => Promise<string | null>
+    logout: (platformId: string) => Promise<void>
+    detectPlatform: (url: string) => Promise<string | null>
+    getPlatforms: () => Promise<{ id: string; name: string }[]>
+  }
 }
 
 declare interface Window {

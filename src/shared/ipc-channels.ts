@@ -6,6 +6,14 @@ export const IPC_CHANNELS = {
   YTDLP_PROGRESS: 'ytdlp:progress',
   YTDLP_SET_COOKIES: 'ytdlp:set-cookies',
 
+  // 认证
+  AUTH_LOGIN: 'auth:login',
+  AUTH_GET_LOGGED_IN: 'auth:get-logged-in',
+  AUTH_GET_COOKIES: 'auth:get-cookies',
+  AUTH_LOGOUT: 'auth:logout',
+  AUTH_DETECT_PLATFORM: 'auth:detect-platform',
+  AUTH_GET_PLATFORMS: 'auth:get-platforms',
+
   // 系统音频
   SYSTEM_AUDIO_START: 'system-audio:start',
   SYSTEM_AUDIO_STOP: 'system-audio:stop',

@@ -38,7 +38,16 @@ const api = {
   },
 
   exportMarkdown: (content: string, defaultName?: string) =>
-    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_MARKDOWN, content, defaultName)
+    ipcRenderer.invoke(IPC_CHANNELS.EXPORT_MARKDOWN, content, defaultName),
+
+  auth: {
+    login: (platformId: string) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGIN, platformId),
+    getLoggedIn: (): Promise<string[]> => ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_LOGGED_IN),
+    getCookies: (platformId: string): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_COOKIES, platformId),
+    logout: (platformId: string) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGOUT, platformId),
+    detectPlatform: (url: string): Promise<string | null> => ipcRenderer.invoke(IPC_CHANNELS.AUTH_DETECT_PLATFORM, url),
+    getPlatforms: (): Promise<{ id: string; name: string }[]> => ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_PLATFORMS),
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)

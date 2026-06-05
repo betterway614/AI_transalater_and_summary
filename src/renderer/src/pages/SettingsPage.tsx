@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useSettingsStore } from '../store/settingsStore'
 import { WHISPER_PRESETS, TRANSLATOR_PRESETS, WHISPER_LANGUAGES } from '@shared/constants'
 import type { APIPreset } from '@shared/constants'
+import PlatformLoginSection from '../components/Auth/PlatformLoginSection'
 
 export default function SettingsPage() {
   const settings = useSettingsStore((s) => s.settings)
@@ -332,28 +333,17 @@ export default function SettingsPage() {
         </FormControl>
       </Paper>
 
-      {/* 视频平台设置 */}
+      {/* 视频平台登录 */}
       <Paper sx={{ p: 2 }}>
         <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-          视频平台设置
+          视频平台登录
         </Typography>
 
         <Alert severity="info" sx={{ mb: 2 }}>
-          B站等平台部分视频需要登录。使用浏览器扩展 "Get cookies.txt LOCALLY" 导出 cookies 文件，在此配置路径。
+          部分平台视频需要登录才能访问。点击下方按钮打开登录窗口，登录成功后自动保存。
         </Alert>
 
-        <TextField
-          fullWidth
-          size="small"
-          label="Cookies 文件路径"
-          value={settings.general.cookiesPath || ''}
-          onChange={(e) => {
-            updateGeneral({ cookiesPath: e.target.value || undefined })
-            window.api.ytdlp.setCookies(e.target.value || null)
-          }}
-          placeholder="C:\Users\...\cookies.txt"
-          helperText="留空则不使用 cookies。支持 Netscape 格式的 cookies.txt 文件。"
-        />
+        <PlatformLoginSection />
       </Paper>
     </Box>
   )

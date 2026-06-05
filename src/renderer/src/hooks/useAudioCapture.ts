@@ -18,6 +18,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onAudioChunkRef = useRef(onAudioChunk)
   const isCapturingRef = useRef(false)
+  const sampleRateRef = useRef(16000) // Locked at start time
 
   useEffect(() => {
     onAudioChunkRef.current = onAudioChunk
@@ -39,8 +40,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
     chunkBufferRef.current = []
     chunkDurationRef.current = 0
 
-    const settings = useSettingsStore.getState().settings
-    const targetRate = settings.audio.sampleRate || 16000
+    const targetRate = sampleRateRef.current
 
     resampleAudio(merged, ctx.sampleRate, targetRate).then((resampled) => {
       const wavBuffer = pcmToWav(resampled, targetRate)
@@ -52,6 +52,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
   const start = useCallback(async () => {
     const settings = useSettingsStore.getState().settings
     const sampleRate = settings.audio.sampleRate || 16000
+    sampleRateRef.current = sampleRate
     const inputDevice = settings.audio.inputDevice
     const vadSensitivity = settings.audio.vadSensitivity || 'medium'
 
@@ -140,6 +141,19 @@ export function useAudioCapture(options: AudioCaptureOptions) {
     chunkDurationRef.current = 0
     setIsCapturing(false)
   }, [flushBuffer])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (isCapturingRef.current) {
+        isCapturingRef.current = false
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current)
+        processorRef.current?.disconnect()
+        contextRef.current?.close()
+        streamRef.current?.getTracks().forEach((t) => t.stop())
+      }
+    }
+  }, [])
 
   return { start, stop, isCapturing }
 }

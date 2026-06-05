@@ -5,7 +5,6 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { useState, useCallback } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useURLAudio } from '../../hooks/useURLAudio'
-import { useSettingsStore } from '../../store/settingsStore'
 import type { VideoInfo } from '@shared/types'
 
 export default function URLInputPanel() {
@@ -17,8 +16,8 @@ export default function URLInputPanel() {
 
   const status = useAppStore((s) => s.status)
   const mode = useAppStore((s) => s.mode)
+  const startTranslation = useAppStore((s) => s.startTranslation)
   const stopTranslation = useAppStore((s) => s.stopTranslation)
-  const cookiesPath = useSettingsStore((s) => s.settings.general.cookiesPath)
   const { start, stop } = useURLAudio()
 
   const isRunning = status !== 'idle' && status !== 'error'
@@ -29,7 +28,8 @@ export default function URLInputPanel() {
     setInfoError('')
     setVideoInfo(null)
 
-    // Set cookies before fetching info
+    // Auto-detect platform cookies
+    const cookiesPath = await window.api.auth.detectPlatform(url.trim())
     if (cookiesPath) {
       await window.api.ytdlp.setCookies(cookiesPath)
     }
@@ -43,7 +43,7 @@ export default function URLInputPanel() {
       setVideoInfo(result as VideoInfo)
       setSelectedPart(0)
     }
-  }, [url, cookiesPath])
+  }, [url])
 
   const handleToggle = () => {
     if (isRunning) {
@@ -51,9 +51,9 @@ export default function URLInputPanel() {
       stopTranslation()
     } else {
       if (!url.trim()) return
+      startTranslation()
       start(url.trim(), mode, {
-        partIndex: videoInfo && videoInfo.partCount > 1 ? selectedPart : undefined,
-        cookiesPath
+        partIndex: videoInfo && videoInfo.partCount > 1 ? selectedPart : undefined
       })
     }
   }
