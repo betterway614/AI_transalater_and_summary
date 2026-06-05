@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useSubtitleStore } from '../store/subtitleStore'
 import { useSettingsStore } from '../store/settingsStore'
-import { DeepSeekService } from '../services/deepseek.service'
+import { SummaryService } from '../services/summary.service'
 
 export function useSummary() {
   const [summary, setSummary] = useState<string | null>(null)
@@ -22,16 +22,14 @@ export function useSummary() {
         return
       }
 
-      const deepseek = new DeepSeekService({ apiKey, model, baseUrl })
+      const service = new SummaryService({ apiKey, model, baseUrl })
 
       const fullText = confirmedEntries
         .map((e) => `${e.originalText}\n${e.translatedText}`)
         .join('\n\n')
 
       let result = ''
-      for await (const chunk of deepseek.streamingTranslate(
-        `请对以下翻译内容生成结构化摘要（Markdown格式，使用三级标题）：\n\n${fullText}`
-      )) {
+      for await (const chunk of service.streamingSummarize(fullText)) {
         result = chunk.text
       }
       setSummary(result)

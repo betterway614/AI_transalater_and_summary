@@ -14,7 +14,8 @@ const api = {
   },
 
   ytdlp: {
-    extractAudio: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.YTDLP_EXTRACT_AUDIO, url),
+    extractAudio: (url: string): Promise<{ success: boolean; data?: ArrayBuffer; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.YTDLP_EXTRACT_AUDIO, url),
     getInfo: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.YTDLP_GET_INFO, url),
     cancel: () => ipcRenderer.invoke(IPC_CHANNELS.YTDLP_CANCEL),
     onProgress: (callback: (progress: number) => void) => {

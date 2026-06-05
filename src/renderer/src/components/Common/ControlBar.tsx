@@ -10,17 +10,25 @@ import { useSubtitleStore } from '../../store/subtitleStore'
 import { formatMarkdown } from '../../utils/markdown-exporter'
 import StatusBadge from './StatusBadge'
 
-export default function ControlBar() {
+interface ControlBarProps {
+  onStart?: () => void
+  onStop?: () => void
+}
+
+export default function ControlBar({ onStart, onStop }: ControlBarProps) {
   const status = useAppStore((s) => s.status)
   const isPaused = useAppStore((s) => s.isPaused)
   const showFloating = useAppStore((s) => s.showFloating)
-  const stopTranslation = useAppStore((s) => s.stopTranslation)
   const pauseTranslation = useAppStore((s) => s.pauseTranslation)
   const resumeTranslation = useAppStore((s) => s.resumeTranslation)
   const setShowFloating = useAppStore((s) => s.setShowFloating)
   const entries = useSubtitleStore((s) => s.entries)
 
   const isRunning = status !== 'idle' && status !== 'error'
+
+  const handleStop = () => {
+    onStop?.()
+  }
 
   const handleExport = async () => {
     if (!window.api) return
@@ -61,7 +69,7 @@ export default function ControlBar() {
               </IconButton>
             </Tooltip>
             <Tooltip title="停止">
-              <IconButton size="small" onClick={stopTranslation} color="error">
+              <IconButton size="small" onClick={handleStop} color="error">
                 <StopIcon fontSize="small" />
               </IconButton>
             </Tooltip>

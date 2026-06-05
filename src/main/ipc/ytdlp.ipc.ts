@@ -7,16 +7,13 @@ const ytdlpService = new YtdlpService()
 export function registerYtdlpIpc(): void {
   ipcMain.handle(IPC_CHANNELS.YTDLP_EXTRACT_AUDIO, async (event, url: string) => {
     try {
-      await ytdlpService.extractAudio(
+      const audioBuffer = await ytdlpService.extractAudio(
         url,
         (progress) => {
           event.sender.send(IPC_CHANNELS.YTDLP_PROGRESS, progress)
-        },
-        (data) => {
-          event.sender.send(IPC_CHANNELS.SYSTEM_AUDIO_DATA, data.buffer)
         }
       )
-      return { success: true }
+      return { success: true, data: audioBuffer.buffer }
     } catch (err: any) {
       return { success: false, error: err.message }
     }

@@ -1,23 +1,26 @@
-import { Box, TextField, Button, Paper } from '@mui/material'
+import { TextField, Button, Paper } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
 import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { useURLAudio } from '../../hooks/useURLAudio'
 
 export default function URLInputPanel() {
   const [url, setUrl] = useState('')
   const status = useAppStore((s) => s.status)
-  const startTranslation = useAppStore((s) => s.startTranslation)
+  const mode = useAppStore((s) => s.mode)
   const stopTranslation = useAppStore((s) => s.stopTranslation)
+  const { start, stop } = useURLAudio()
 
   const isRunning = status !== 'idle' && status !== 'error'
 
   const handleToggle = () => {
     if (isRunning) {
+      stop()
       stopTranslation()
     } else {
       if (!url.trim()) return
-      startTranslation()
+      start(url.trim(), mode)
     }
   }
 

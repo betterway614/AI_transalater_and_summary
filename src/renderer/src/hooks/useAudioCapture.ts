@@ -1,24 +1,13 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { resampleAudio, detectVoiceActivity, pcmToWav } from '../services/audio-processor'
+import { useSettingsStore } from '../store/settingsStore'
 
 export interface AudioCaptureOptions {
-  sampleRate?: number
-  vadEnabled?: boolean
-  vadThreshold?: number
-  chunkDurationMs?: number
-  silenceFlushMs?: number
   onAudioChunk: (wavBlob: Blob) => void
 }
 
 export function useAudioCapture(options: AudioCaptureOptions) {
-  const {
-    sampleRate = 16000,
-    vadEnabled = true,
-    vadThreshold = -40,
-    chunkDurationMs = 1500,
-    silenceFlushMs = 500,
-    onAudioChunk
-  } = options
+  const { onAudioChunk } = options
 
   const [isCapturing, setIsCapturing] = useState(false)
   const streamRef = useRef<MediaStream | null>(null)
@@ -26,19 +15,16 @@ export function useAudioCapture(options: AudioCaptureOptions) {
   const processorRef = useRef<ScriptProcessorNode | null>(null)
   const chunkBufferRef = useRef<Float32Array[]>([])
   const chunkDurationRef = useRef(0)
-  const lastVoiceTimeRef = useRef(0)
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onAudioChunkRef = useRef(onAudioChunk)
   const isCapturingRef = useRef(false)
 
-  // Keep callback ref current
   useEffect(() => {
     onAudioChunkRef.current = onAudioChunk
   }, [onAudioChunk])
 
   const flushBuffer = useCallback(() => {
     if (chunkBufferRef.current.length === 0) return
-
     const ctx = contextRef.current
     if (!ctx) return
 
@@ -53,23 +39,42 @@ export function useAudioCapture(options: AudioCaptureOptions) {
     chunkBufferRef.current = []
     chunkDurationRef.current = 0
 
-    // Process async without blocking
-    resampleAudio(merged, ctx.sampleRate, sampleRate).then((resampled) => {
-      const wavBuffer = pcmToWav(resampled, sampleRate)
+    const settings = useSettingsStore.getState().settings
+    const targetRate = settings.audio.sampleRate || 16000
+
+    resampleAudio(merged, ctx.sampleRate, targetRate).then((resampled) => {
+      const wavBuffer = pcmToWav(resampled, targetRate)
       const blob = new Blob([wavBuffer], { type: 'audio/wav' })
       onAudioChunkRef.current(blob)
     })
-  }, [sampleRate])
+  }, [])
 
   const start = useCallback(async () => {
+    const settings = useSettingsStore.getState().settings
+    const sampleRate = settings.audio.sampleRate || 16000
+    const inputDevice = settings.audio.inputDevice
+    const vadSensitivity = settings.audio.vadSensitivity || 'medium'
+
+    // Map sensitivity to dB threshold
+    const vadThresholdMap = { low: -30, medium: -40, high: -50 }
+    const vadThreshold = vadThresholdMap[vadSensitivity]
+
     try {
+      // Build audio constraints
+      const audioConstraints: MediaTrackConstraints = {
+        sampleRate,
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true
+      }
+
+      // Apply selected device
+      if (inputDevice && inputDevice !== 'default') {
+        audioConstraints.deviceId = { exact: inputDevice }
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true
-        }
+        audio: audioConstraints
       })
 
       streamRef.current = stream
@@ -85,32 +90,25 @@ export function useAudioCapture(options: AudioCaptureOptions) {
 
         const inputData = e.inputBuffer.getChannelData(0)
         const chunk = new Float32Array(inputData)
-
-        const hasVoice = vadEnabled ? detectVoiceActivity(chunk, vadThreshold) : true
+        const hasVoice = detectVoiceActivity(chunk, vadThreshold)
 
         if (hasVoice) {
-          lastVoiceTimeRef.current = Date.now()
-
-          // Clear pending silence flush
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current)
             silenceTimerRef.current = null
           }
-
           chunkBufferRef.current.push(chunk)
           chunkDurationRef.current += (chunk.length / sampleRate) * 1000
 
-          // Flush when chunk duration reached
-          if (chunkDurationRef.current >= chunkDurationMs) {
+          if (chunkDurationRef.current >= 1500) {
             flushBuffer()
           }
         } else if (chunkBufferRef.current.length > 0) {
-          // Voice stopped with pending audio — start silence timer
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(() => {
               silenceTimerRef.current = null
               flushBuffer()
-            }, silenceFlushMs)
+            }, 500)
           }
         }
       }
@@ -123,7 +121,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
       console.error('Failed to start audio capture:', err)
       throw err
     }
-  }, [sampleRate, vadEnabled, vadThreshold, chunkDurationMs, silenceFlushMs, flushBuffer])
+  }, [flushBuffer])
 
   const stop = useCallback(() => {
     isCapturingRef.current = false
@@ -131,13 +129,10 @@ export function useAudioCapture(options: AudioCaptureOptions) {
       clearTimeout(silenceTimerRef.current)
       silenceTimerRef.current = null
     }
-    // Flush any remaining audio
     flushBuffer()
-
     processorRef.current?.disconnect()
     contextRef.current?.close()
     streamRef.current?.getTracks().forEach((t) => t.stop())
-
     processorRef.current = null
     contextRef.current = null
     streamRef.current = null

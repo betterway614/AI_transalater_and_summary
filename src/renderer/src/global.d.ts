@@ -9,7 +9,7 @@ interface ElectronAPI {
     set: (key: string, value: unknown) => Promise<void>
   }
   ytdlp: {
-    extractAudio: (url: string) => Promise<string>
+    extractAudio: (url: string) => Promise<{ success: boolean; data?: ArrayBuffer; error?: string }>
     getInfo: (url: string) => Promise<unknown>
     cancel: () => Promise<void>
     onProgress: (callback: (progress: number) => void) => () => void

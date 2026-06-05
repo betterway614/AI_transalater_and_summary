@@ -1,15 +1,14 @@
 import { ChildProcess, spawn } from 'child_process'
-import { app } from 'electron'
-import { join } from 'path'
-import { existsSync } from 'fs'
 import log from 'electron-log'
+import { resolveBinary } from '../utils/paths'
+import { getPlatformBinary } from '../utils/platform'
 
 /**
  * System audio capture using WASAPI Loopback on Windows.
  *
  * Strategy:
- * 1. Primary: Use bundled sox.exe with WASAPI loopback
- * 2. Fallback: Use PowerShell with Windows Audio API
+ * 1. Primary: Use sox with WASAPI loopback
+ * 2. Fallback: Use ffmpeg with WASAPI
  * 3. Graceful degradation with user guidance if neither works
  */
 export class SystemAudioService {
@@ -19,30 +18,24 @@ export class SystemAudioService {
   start(onData: (data: Buffer) => void): void {
     if (this.isCapturing) return
 
-    const isDev = !app.isPackaged
-    const binDir = isDev
-      ? join(__dirname, '../../resources/bin')
-      : join(process.resourcesPath, 'bin')
-
     // Strategy 1: Try sox with WASAPI loopback
-    const soxPath = join(binDir, process.platform === 'win32' ? 'sox.exe' : 'sox')
-    if (existsSync(soxPath)) {
+    const soxPath = resolveBinary(getPlatformBinary('sox'))
+    if (soxPath) {
       this.startWithSox(soxPath, onData)
       return
     }
 
     // Strategy 2: Try ffmpeg with WASAPI
-    const ffmpegPath = join(binDir, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg')
-    if (existsSync(ffmpegPath)) {
+    const ffmpegPath = resolveBinary(getPlatformBinary('ffmpeg'))
+    if (ffmpegPath) {
       this.startWithFfmpeg(ffmpegPath, onData)
       return
     }
 
     // Strategy 3: Fallback - no system audio capture available
-    log.warn('[SystemAudio] No audio capture tool found. Install sox or ffmpeg in resources/bin/')
     throw new Error(
       '系统音频捕获需要安装 sox 或 ffmpeg 工具。\n' +
-      '请将 sox.exe 或 ffmpeg.exe 放置到 resources/bin/ 目录下。\n' +
+      '请将 sox.exe 或 ffmpeg.exe 放置到 resources/bin/ 目录下，或确保它们在系统 PATH 中。\n' +
       '下载地址: https://github.com/yt-dlp/FFmpeg-Builds/releases'
     )
   }

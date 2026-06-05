@@ -3,6 +3,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
+import { useSettingsStore } from '../../store/settingsStore'
 
 const languages = [
   { code: 'en', name: '英文' },
@@ -11,43 +12,51 @@ const languages = [
   { code: 'ko', name: '韩文' }
 ]
 
-export default function DeviceSelector() {
+interface DeviceSelectorProps {
+  onStart: () => void
+  onStop: () => void
+}
+
+export default function DeviceSelector({ onStart, onStop }: DeviceSelectorProps) {
   const mode = useAppStore((s) => s.mode)
   const status = useAppStore((s) => s.status)
-  const startTranslation = useAppStore((s) => s.startTranslation)
-  const stopTranslation = useAppStore((s) => s.stopTranslation)
+  const settings = useSettingsStore((s) => s.settings)
+  const updateAudio = useSettingsStore((s) => s.updateAudio)
+  const updateAI = useSettingsStore((s) => s.updateAI)
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
 
   const isRunning = status !== 'idle' && status !== 'error'
 
-  useEffect(() => {
-    if (mode === 'microphone') {
-      navigator.mediaDevices
-        .enumerateDevices()
-        .then((all) => setDevices(all.filter((d) => d.kind === 'audioinput')))
-        .catch(() => {})
-    }
-  }, [mode])
-
-  // Re-fetch when permissions change
+  // Enumerate audio input devices
   useEffect(() => {
     if (mode !== 'microphone') return
-    const handler = () => {
+
+    const fetchDevices = () => {
       navigator.mediaDevices
         .enumerateDevices()
         .then((all) => setDevices(all.filter((d) => d.kind === 'audioinput')))
         .catch(() => {})
     }
-    navigator.mediaDevices.addEventListener('devicechange', handler)
-    return () => navigator.mediaDevices.removeEventListener('devicechange', handler)
+
+    fetchDevices()
+    navigator.mediaDevices.addEventListener('devicechange', fetchDevices)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', fetchDevices)
   }, [mode])
 
   const handleToggle = () => {
     if (isRunning) {
-      stopTranslation()
+      onStop()
     } else {
-      startTranslation()
+      onStart()
     }
+  }
+
+  const handleDeviceChange = (deviceId: string) => {
+    updateAudio({ inputDevice: deviceId })
+  }
+
+  const handleSourceLangChange = (code: string) => {
+    updateAI({ whisper: { ...settings.ai.whisper, language: code } })
   }
 
   return (
@@ -65,7 +74,12 @@ export default function DeviceSelector() {
         {mode === 'microphone' && (
           <FormControl size="small" sx={{ minWidth: 180 }}>
             <InputLabel>麦克风</InputLabel>
-            <Select label="麦克风" defaultValue="default">
+            <Select
+              label="麦克风"
+              value={settings.audio.inputDevice}
+              onChange={(e) => handleDeviceChange(e.target.value)}
+              disabled={isRunning}
+            >
               <MenuItem value="default">默认麦克风</MenuItem>
               {devices.map((d) => (
                 <MenuItem key={d.deviceId} value={d.deviceId}>
@@ -84,7 +98,12 @@ export default function DeviceSelector() {
 
         <FormControl size="small" sx={{ minWidth: 100 }}>
           <InputLabel>源语言</InputLabel>
-          <Select label="源语言" defaultValue="en">
+          <Select
+            label="源语言"
+            value={settings.ai.whisper.language || 'en'}
+            onChange={(e) => handleSourceLangChange(e.target.value)}
+            disabled={isRunning}
+          >
             {languages.map((l) => (
               <MenuItem key={l.code} value={l.code}>
                 {l.name}
@@ -97,7 +116,7 @@ export default function DeviceSelector() {
 
         <FormControl size="small" sx={{ minWidth: 100 }}>
           <InputLabel>目标语言</InputLabel>
-          <Select label="目标语言" defaultValue="zh">
+          <Select label="目标语言" value="zh" disabled>
             {languages.map((l) => (
               <MenuItem key={l.code} value={l.code}>
                 {l.name}
