@@ -6,7 +6,7 @@
   "author": "AI Interpreter Team",
   "license": "MIT",
   "scripts": {
-    "dev": "env -u ELECTRON_RUN_AS_NODE electron-vite dev",
+    "dev": "node scripts/dev.js",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "start": "electron-vite preview",
@@ -43,6 +43,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.20",
+    "cross-env": "^10.1.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.0",
     "electron-vite": "^2.3.0",
