@@ -1,19 +1,14 @@
 import { execFile, ChildProcess } from 'child_process'
-import { join } from 'path'
-import { app } from 'electron'
 import log from 'electron-log'
+import { getBinPath } from '../utils/paths'
+import { getPlatformBinary } from '../utils/platform'
 
 export class YtdlpService {
   private process: ChildProcess | null = null
   private ytdlpPath: string
 
   constructor() {
-    const isDev = !app.isPackaged
-    if (isDev) {
-      this.ytdlpPath = join(__dirname, '../../resources/bin/yt-dlp.exe')
-    } else {
-      this.ytdlpPath = join(process.resourcesPath, 'bin/yt-dlp.exe')
-    }
+    this.ytdlpPath = getBinPath(getPlatformBinary('yt-dlp'))
   }
 
   async getVideoInfo(url: string): Promise<{ title: string; duration: number }> {
@@ -32,7 +27,7 @@ export class YtdlpService {
           try {
             const info = JSON.parse(stdout)
             resolve({ title: info.title, duration: info.duration })
-          } catch (e) {
+          } catch {
             reject(new Error('Failed to parse video info'))
           }
         } else {
@@ -54,17 +49,7 @@ export class YtdlpService {
     return new Promise((resolve, reject) => {
       this.process = execFile(
         this.ytdlpPath,
-        [
-          '-x',
-          '--audio-format',
-          'wav',
-          '--audio-quality',
-          '0',
-          '-o',
-          '-',
-          '--no-playlist',
-          url
-        ],
+        ['-x', '--audio-format', 'wav', '--audio-quality', '0', '-o', '-', '--no-playlist', url],
         { maxBuffer: 1024 * 1024 * 50 }
       )
 
@@ -74,21 +59,15 @@ export class YtdlpService {
 
       this.process.stderr?.on('data', (data) => {
         const text = data.toString()
-        // Parse progress from yt-dlp stderr
         const match = text.match(/(\d+\.?\d*)%/)
-        if (match) {
-          onProgress(parseFloat(match[1]))
-        }
+        if (match) onProgress(parseFloat(match[1]))
         log.info('[yt-dlp]', text.trim())
       })
 
       this.process.on('close', (code) => {
         this.process = null
-        if (code === 0) {
-          resolve()
-        } else {
-          reject(new Error(`yt-dlp exited with code ${code}`))
-        }
+        if (code === 0) resolve()
+        else reject(new Error(`yt-dlp exited with code ${code}`))
       })
 
       this.process.on('error', (err) => {

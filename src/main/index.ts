@@ -1,10 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { createMainWindow, getMainWindow } from './window'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
-import { registerYtdlpIpc } from './ipc/ytdlp.ipc'
-import { registerAudioIpc } from './ipc/audio.ipc'
-import { registerExportIpc } from './ipc/export.ipc'
-import { registerStoreIpc } from './ipc/store.ipc'
+import { registerAllIpc } from './ipc'
 import { createTray } from './tray'
 
 app.whenReady().then(() => {
@@ -25,11 +22,8 @@ app.whenReady().then(() => {
   createMainWindow()
   createTray(getMainWindow)
 
-  // Register IPC handlers
-  registerYtdlpIpc()
-  registerAudioIpc()
-  registerExportIpc()
-  registerStoreIpc()
+  // Register all IPC handlers
+  registerAllIpc()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
