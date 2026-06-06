@@ -32,7 +32,7 @@ export default function HistoryPage() {
   const allSessions = [...sessions]
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 2, maxWidth: 800, mx: 'auto', width: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           翻译历史
