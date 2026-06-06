@@ -125,7 +125,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
           chunkBufferRef.current.push(chunk)
           chunkDurationRef.current += (chunk.length / ctx.sampleRate) * 1000
 
-          if (chunkDurationRef.current >= 1500) {
+          if (chunkDurationRef.current >= 8000) {
             log(`[MicCapture] Flushing: dur=${chunkDurationRef.current.toFixed(0)}ms, chunks=${chunkBufferRef.current.length}`)
             flushBuffer()
           }
@@ -135,7 +135,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
               silenceTimerRef.current = null
               log(`[MicCapture] Silence flush: chunks=${chunkBufferRef.current.length}`)
               flushBuffer()
-            }, 500)
+            }, 1500)
           }
         }
       }

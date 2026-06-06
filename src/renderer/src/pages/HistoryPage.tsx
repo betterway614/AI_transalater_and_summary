@@ -2,53 +2,25 @@ import { Box, Typography, Paper, Chip, IconButton, Tooltip } from '@mui/material
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import HistoryIcon from '@mui/icons-material/History'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { useHistoryStore, type HistorySession } from '../store/historyStore'
 import { useSubtitleStore } from '../store/subtitleStore'
-import type { SubtitleEntry } from '@shared/types'
 
-interface Session {
-  id: string
-  startTime: number
-  entries: SubtitleEntry[]
+const modeLabels: Record<string, string> = {
+  'url': 'URL 视频',
+  'system-audio': '系统音频',
+  'microphone': '麦克风'
 }
 
 export default function HistoryPage() {
-  const entries = useSubtitleStore((s) => s.entries)
-  const clearEntries = useSubtitleStore((s) => s.clearEntries)
-  const [sessions, setSessions] = useState<Session[]>([])
+  const { sessions, loadHistory, deleteSession, clearHistory } = useHistoryStore()
+  const currentEntries = useSubtitleStore((s) => s.entries)
 
   useEffect(() => {
-    if (entries.length === 0) {
-      setSessions([])
-      return
-    }
+    loadHistory()
+  }, [loadHistory])
 
-    const result: Session[] = []
-    let current: SubtitleEntry[] = [entries[0]]
-
-    for (let i = 1; i < entries.length; i++) {
-      if (entries[i].timestamp - entries[i - 1].timestamp > 5 * 60 * 1000) {
-        result.push({
-          id: `session_${current[0].timestamp}`,
-          startTime: current[0].timestamp,
-          entries: current
-        })
-        current = [entries[i]]
-      } else {
-        current.push(entries[i])
-      }
-    }
-
-    result.push({
-      id: `session_${current[0].timestamp}`,
-      startTime: current[0].timestamp,
-      entries: current
-    })
-
-    setSessions(result.reverse())
-  }, [entries])
-
-  const handleCopySession = (session: Session) => {
+  const handleCopySession = (session: HistorySession) => {
     const text = session.entries
       .map((e) => `${e.originalText}\n${e.translatedText}`)
       .join('\n\n')
@@ -57,22 +29,24 @@ export default function HistoryPage() {
 
   const formatTime = (ts: number) => new Date(ts).toLocaleString('zh-CN')
 
+  const allSessions = [...sessions]
+
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 2, maxWidth: 800, mx: 'auto', width: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           翻译历史
         </Typography>
-        {entries.length > 0 && (
-          <Tooltip title="清空记录" arrow>
-            <IconButton size="small" onClick={clearEntries}>
+        {allSessions.length > 0 && (
+          <Tooltip title="清空所有历史" arrow>
+            <IconButton size="small" onClick={clearHistory}>
               <DeleteOutlineIcon />
             </IconButton>
           </Tooltip>
         )}
       </Box>
 
-      {sessions.length === 0 ? (
+      {allSessions.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <HistoryIcon sx={{ fontSize: 56, color: 'text.disabled', opacity: 0.3, mb: 2 }} />
           <Typography color="text.secondary">暂无翻译记录</Typography>
@@ -82,7 +56,7 @@ export default function HistoryPage() {
         </Box>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {sessions.map((session) => (
+          {allSessions.map((session) => (
             <Paper
               key={session.id}
               elevation={0}
@@ -106,20 +80,29 @@ export default function HistoryPage() {
                   <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     {formatTime(session.startTime)}
                   </Typography>
+                  <Chip label={modeLabels[session.mode] || session.mode} size="small" variant="outlined" color="primary" />
                   <Chip label={`${session.entries.length} 条`} size="small" variant="outlined" />
                 </Box>
-                <Tooltip title="复制" arrow>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleCopySession(session)}
-                    sx={{
-                      transition: 'all 0.15s ease',
-                      '&:hover': { bgcolor: 'var(--hover-glow)' }
-                    }}
-                  >
-                    <ContentCopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <Box>
+                  <Tooltip title="复制" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleCopySession(session)}
+                      sx={{ transition: 'all 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)' } }}
+                    >
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="删除" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={() => deleteSession(session.id)}
+                      sx={{ transition: 'all 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)' } }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               </Box>
 
               <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>

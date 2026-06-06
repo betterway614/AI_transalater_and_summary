@@ -193,7 +193,7 @@ export default function SettingsPage() {
   )
 
   return (
-    <Box sx={{ p: 3, maxWidth: 600, overflow: 'auto' }}>
+    <Box sx={{ p: 2, maxWidth: 800, mx: 'auto', width: '100%', overflow: 'auto' }}>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
         设置
       </Typography>

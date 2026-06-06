@@ -53,8 +53,11 @@ export default function HomePage() {
     onAudioChunk: handleAudioChunk
   })
 
+  const clearEntries = useSubtitleStore((s) => s.clearEntries)
+
   const handleStart = useCallback(async () => {
     log(`[HomePage] handleStart called, mode=${mode}`)
+    clearEntries() // Clear previous entries before starting new capture
     startTranslation()
     try {
       if (mode === 'system-audio') {
@@ -68,7 +71,7 @@ export default function HomePage() {
       console.error('Failed to start audio capture:', err)
       stopTranslation()
     }
-  }, [mode, startTranslation, startMicCapture, startSystemAudio, stopTranslation, setShowFloating])
+  }, [mode, clearEntries, startTranslation, startMicCapture, startSystemAudio, stopTranslation, setShowFloating])
 
   const handleStop = useCallback(() => {
     if (mode === 'system-audio') {

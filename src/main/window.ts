@@ -19,12 +19,23 @@ export function createMainWindow(): BrowserWindow {
   })
 
   // Handle getDisplayMedia() auto-approval
-  // MUST be synchronous — async handler causes getDisplayMedia() to hang forever
+  // Electron 33+ requires DesktopCapturerSource object for video
   session.defaultSession.setDisplayMediaRequestHandler(
-    (_request, callback) => {
-      log.info('[Window] getDisplayMedia auto-approved (no picker)')
-      // 'screen' means primary screen; 'loopback' means system audio
-      callback({ video: 'screen' as any, audio: 'loopback' })
+    async (_request, callback) => {
+      try {
+        const sources = await desktopCapturer.getSources({ types: ['screen'] })
+        const primaryScreen = sources[0]
+        if (!primaryScreen) {
+          log.error('[Window] No screen source found')
+          callback({ video: undefined as any })
+          return
+        }
+        log.info('[Window] getDisplayMedia auto-approved, source:', primaryScreen.id)
+        callback({ video: primaryScreen, audio: 'loopback' })
+      } catch (err) {
+        log.error('[Window] getDisplayMedia handler error:', err)
+        callback({ video: undefined as any })
+      }
     },
     { useSystemPicker: false }
   )

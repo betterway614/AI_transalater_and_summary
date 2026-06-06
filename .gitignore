@@ -6,3 +6,4 @@ dist/
 .env
 .env.local
 docs
+resources/bin/

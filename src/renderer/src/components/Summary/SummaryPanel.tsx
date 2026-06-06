@@ -161,7 +161,7 @@ export default function SummaryPanel() {
                 <Tab icon={<ArticleIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="文本" />
                 <Tab icon={<AccountTreeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="思维导图" />
               </Tabs>
-              <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+              <Box sx={{ px: 2, pb: 2, pt: 1, maxHeight: 400, overflow: 'auto' }}>
                 {viewMode === 0 ? (
                   <Typography
                     variant="body2"
