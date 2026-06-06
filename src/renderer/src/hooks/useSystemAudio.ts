@@ -71,17 +71,18 @@ export function useSystemAudioCapture(options: SystemAudioOptions) {
     const vadThreshold = vadThresholdMap[vadSensitivity]
 
     try {
-      log('[SysAudio] Calling getDisplayMedia({ video: true, audio: true })...')
+      log('[SysAudio] Calling getDisplayMedia...')
       let stream: MediaStream
       try {
+        // Electron main process auto-approves via setDisplayMediaRequestHandler
         stream = await navigator.mediaDevices.getDisplayMedia({
           video: true as any,
-          audio: true as any,
+          audio: true as any
         })
-        log('[SysAudio] getDisplayMedia SUCCESS, video tracks:', stream.getVideoTracks().length, 'audio tracks:', stream.getAudioTracks().length)
+        log('[SysAudio] getDisplayMedia SUCCESS, tracks:', stream.getTracks().length, 'audio:', stream.getAudioTracks().length)
       } catch (e: any) {
-        logErr(`[SysAudio] getDisplayMedia FAILED: ${e.name}: ${e.message}`, e)
-        throw e
+        logErr(`[SysAudio] getDisplayMedia FAILED: ${e.name}: ${e.message}`)
+        throw new Error(`无法获取系统音频: ${e.message || e.name}`)
       }
 
       // Stop video tracks immediately — keep only audio
@@ -93,7 +94,7 @@ export function useSystemAudioCapture(options: SystemAudioOptions) {
       const audioTracks = stream.getAudioTracks()
       if (audioTracks.length === 0) {
         stream.getTracks().forEach((t) => t.stop())
-        throw new Error('No system audio stream available')
+        throw new Error('没有获取到系统音频轨道。请确保在分享时勾选了"分享系统音频"。')
       }
 
       const audioTrack = audioTracks[0]
@@ -102,14 +103,13 @@ export function useSystemAudioCapture(options: SystemAudioOptions) {
 
       const ctx = new AudioContext({ sampleRate })
       contextRef.current = ctx
-      log('[SysAudio] AudioContext created, actual sampleRate:', ctx.sampleRate, 'target:', sampleRate)
+      log('[SysAudio] AudioContext created, sampleRate:', ctx.sampleRate)
 
       const source = ctx.createMediaStreamSource(stream)
       const processor = ctx.createScriptProcessor(4096, 1, 1)
       processorRef.current = processor
 
       let processCount = 0
-      let voiceCount = 0
       processor.onaudioprocess = (e) => {
         if (!isCapturingRef.current) return
         processCount++
@@ -125,11 +125,10 @@ export function useSystemAudioCapture(options: SystemAudioOptions) {
         const hasVoice = detectVoiceActivity(chunk, vadThreshold)
 
         if (processCount <= 10 || processCount % 100 === 0) {
-          log(`[SysAudio] #${processCount} rms=${rms.toFixed(6)} db=${db.toFixed(1)} thresh=${vadThreshold} voice=${hasVoice} buf=${chunkBufferRef.current.length} dur=${chunkDurationRef.current.toFixed(0)}ms`)
+          log(`[SysAudio] #${processCount} rms=${rms.toFixed(6)} db=${db.toFixed(1)} voice=${hasVoice}`)
         }
 
         if (hasVoice) {
-          voiceCount++
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current)
             silenceTimerRef.current = null
@@ -137,17 +136,15 @@ export function useSystemAudioCapture(options: SystemAudioOptions) {
           chunkBufferRef.current.push(chunk)
           chunkDurationRef.current += (chunk.length / ctx.sampleRate) * 1000
 
-          if (chunkDurationRef.current >= 1500) {
-            log(`[SysAudio] Flushing: dur=${chunkDurationRef.current.toFixed(0)}ms, chunks=${chunkBufferRef.current.length}, voices=${voiceCount}`)
+          if (chunkDurationRef.current >= 8000) {
             flushBuffer()
           }
         } else if (chunkBufferRef.current.length > 0) {
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(() => {
               silenceTimerRef.current = null
-              log(`[SysAudio] Silence flush: chunks=${chunkBufferRef.current.length}`)
               flushBuffer()
-            }, 500)
+            }, 1500)
           }
         }
       }

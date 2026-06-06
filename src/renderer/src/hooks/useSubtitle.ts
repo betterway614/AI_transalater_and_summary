@@ -112,15 +112,8 @@ export function useSubtitle() {
     async (entry: SubtitleEntry) => {
       const deepseek = getDeepSeek()
 
-      // Use only 1 context entry for faster TTFT
-      const context = useSubtitleStore
-        .getState()
-        .entries.filter((e) => e.isFinal && e.id !== entry.id)
-        .slice(-1)
-        .map((e) => e.originalText)
-
       let finalTranslation = ''
-      for await (const chunk of deepseek.streamingTranslate(entry.originalText, context)) {
+      for await (const chunk of deepseek.streamingTranslate(entry.originalText)) {
         finalTranslation = chunk.text
         throttledUpdate(entry.id, finalTranslation)
       }
