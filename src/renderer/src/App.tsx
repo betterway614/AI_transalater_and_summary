@@ -5,13 +5,16 @@ import HomePage from './pages/HomePage'
 import HistoryPage from './pages/HistoryPage'
 import SettingsPage from './pages/SettingsPage'
 import { useSettingsStore } from './store/settingsStore'
+import { useHistoryStore } from './store/historyStore'
 
 export default function App() {
   const init = useSettingsStore((s) => s.init)
+  const loadHistory = useHistoryStore((s) => s.loadHistory)
 
   useEffect(() => {
     init()
-  }, [init])
+    loadHistory()
+  }, [init, loadHistory])
 
   return (
     <HashRouter>
