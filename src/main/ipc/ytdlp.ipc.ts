@@ -17,7 +17,9 @@ export function registerYtdlpIpc(): void {
           event.sender.send(IPC_CHANNELS.YTDLP_PROGRESS, progress)
         }
       )
-      return { success: true, data: audioBuffer.buffer }
+      // Use Buffer.from() to create a clean copy — avoids Buffer pool byteOffset issues
+      const cleanBuffer = Buffer.from(audioBuffer)
+      return { success: true, data: cleanBuffer.buffer.slice(cleanBuffer.byteOffset, cleanBuffer.byteOffset + cleanBuffer.byteLength) }
     } catch (err: any) {
       return { success: false, error: err.message }
     }

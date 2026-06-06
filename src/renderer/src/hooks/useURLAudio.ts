@@ -63,48 +63,61 @@ export function useURLAudio() {
     progressRef.current = 0
     setStatus('connecting')
 
-    // Auto-detect platform cookies
-    const cookiesPath = await window.api.auth.detectPlatform(url)
+    try {
+      // Auto-detect platform cookies
+      const cookiesPath = await window.api.auth.detectPlatform(url)
 
-    // Step 1: Extract audio (progress via onProgress listener)
-    const result = await window.api.ytdlp.extractAudio(url, options?.partIndex, cookiesPath || undefined)
-    if (cancelledRef.current) return
+      // Step 1: Extract audio (progress via onProgress listener)
+      const result = await window.api.ytdlp.extractAudio(url, options?.partIndex, cookiesPath || undefined)
+      if (cancelledRef.current) return
 
-    if (!result.success || !result.data) {
-      setStatus('error')
-      console.error('yt-dlp error:', result.error)
-      return
-    }
-
-    // Step 2: Split WAV into chunks
-    const chunks = splitWavIntoChunks(result.data)
-    setStatus('listening')
-
-    // Step 3: Process each chunk sequentially
-    for (let i = 0; i < chunks.length; i++) {
-      if (cancelledRef.current) break
-
-      const chunkBlob = new Blob([chunks[i]], { type: 'audio/wav' })
-      const whisper = getWhisper()
-
-      try {
-        const text = await whisper.transcribe(chunkBlob)
-        if (!text.trim()) continue
-
-        const entry = createEntry(text, mode)
-        addEntry(entry)
-        setStatus('translating')
-
-        await translateEntry(entry)
-      } catch (err) {
-        console.error(`Chunk ${i} error:`, err)
+      if (!result.success || !result.data) {
+        setStatus('error')
+        console.error('[useURLAudio] yt-dlp error:', result.error)
+        return
       }
 
-      setStatus('listening')
-    }
+      console.log(`[useURLAudio] Audio downloaded, buffer size: ${result.data.byteLength} bytes`)
 
-    if (!cancelledRef.current) {
-      setStatus('idle')
+      // Step 2: Split WAV into chunks
+      const chunks = splitWavIntoChunks(result.data)
+      console.log(`[useURLAudio] Split into ${chunks.length} chunks`)
+      setStatus('listening')
+
+      // Step 3: Process each chunk sequentially
+      for (let i = 0; i < chunks.length; i++) {
+        if (cancelledRef.current) break
+
+        const chunkBlob = new Blob([chunks[i]], { type: 'audio/wav' })
+        const whisper = getWhisper()
+
+        try {
+          console.log(`[useURLAudio] Processing chunk ${i + 1}/${chunks.length}, size: ${chunkBlob.size} bytes`)
+          const text = await whisper.transcribe(chunkBlob)
+          if (!text.trim()) {
+            console.log(`[useURLAudio] Chunk ${i + 1}: empty transcription, skipping`)
+            continue
+          }
+
+          console.log(`[useURLAudio] Chunk ${i + 1} transcribed: "${text.substring(0, 80)}..."`)
+          const entry = createEntry(text, mode)
+          addEntry(entry)
+          setStatus('translating')
+
+          await translateEntry(entry)
+        } catch (err) {
+          console.error(`[useURLAudio] Chunk ${i + 1} error:`, err)
+        }
+
+        setStatus('listening')
+      }
+
+      if (!cancelledRef.current) {
+        setStatus('idle')
+      }
+    } catch (err) {
+      console.error('[useURLAudio] Fatal error in start():', err)
+      setStatus('error')
     }
   }, [setStatus, addEntry, createEntry, getWhisper, getDeepSeek, updateEntry, markFinal])
 
@@ -136,16 +149,62 @@ export function useURLAudio() {
 /**
  * Split a WAV ArrayBuffer (16kHz mono 16-bit) into chunk-sized WAV Blobs.
  * Each chunk gets a proper WAV header so Whisper API accepts it.
+ * Properly parses WAV chunks to find the data payload (handles extra LIST/metadata chunks).
  */
 function splitWavIntoChunks(wavBuffer: ArrayBuffer): ArrayBuffer[] {
-  const pcmData = wavBuffer.slice(HEADER_SIZE)
+  // Validate minimum WAV header size
+  if (wavBuffer.byteLength < 44) {
+    throw new Error(`WAV buffer too small: ${wavBuffer.byteLength} bytes (expected >= 44)`)
+  }
+
+  const view = new DataView(wavBuffer)
+
+  // Verify RIFF/WAVE signature
+  const riff = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3))
+  const wave = String.fromCharCode(view.getUint8(8), view.getUint8(9), view.getUint8(10), view.getUint8(11))
+  if (riff !== 'RIFF' || wave !== 'WAVE') {
+    throw new Error(`Invalid WAV signature: got "${riff}" / "${wave}", expected "RIFF" / "WAVE"`)
+  }
+
+  // Parse WAV chunks to find the "data" chunk
+  let dataOffset = -1
+  let dataSize = -1
+  let offset = 12 // skip RIFF header
+
+  while (offset + 8 <= wavBuffer.byteLength) {
+    const chunkId = String.fromCharCode(
+      view.getUint8(offset), view.getUint8(offset + 1),
+      view.getUint8(offset + 2), view.getUint8(offset + 3)
+    )
+    const chunkSize = view.getUint32(offset + 4, true)
+
+    if (chunkId === 'data') {
+      dataOffset = offset + 8
+      dataSize = chunkSize
+      break
+    }
+
+    // Skip to next chunk (chunks are 2-byte aligned)
+    offset += 8 + chunkSize + (chunkSize % 2)
+  }
+
+  if (dataOffset < 0 || dataSize < 0) {
+    throw new Error('WAV data chunk not found')
+  }
+
+  // Clamp dataSize to actual available bytes (some files may have inaccurate size)
+  dataSize = Math.min(dataSize, wavBuffer.byteLength - dataOffset)
+
+  console.log(`[splitWavIntoChunks] WAV data at offset=${dataOffset}, size=${dataSize}, duration=${(dataSize / (SAMPLE_RATE * BYTES_PER_SAMPLE)).toFixed(1)}s`)
+
+  const pcmData = wavBuffer.slice(dataOffset, dataOffset + dataSize)
   const pcmBytes = pcmData.byteLength
   const chunkPcmBytes = CHUNK_DURATION_SEC * SAMPLE_RATE * BYTES_PER_SAMPLE
   const chunks: ArrayBuffer[] = []
 
-  for (let offset = 0; offset < pcmBytes; offset += chunkPcmBytes) {
-    const end = Math.min(offset + chunkPcmBytes, pcmBytes)
-    const chunkPcm = pcmData.slice(offset, end)
+  for (let pos = 0; pos < pcmBytes; pos += chunkPcmBytes) {
+    const end = Math.min(pos + chunkPcmBytes, pcmBytes)
+    const chunkPcm = pcmData.slice(pos, end)
     const header = buildWavHeader(chunkPcm.byteLength)
     const combined = new Uint8Array(header.byteLength + chunkPcm.byteLength)
     combined.set(new Uint8Array(header), 0)

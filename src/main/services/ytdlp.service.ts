@@ -1,6 +1,6 @@
 import { execFile, ChildProcess } from 'child_process'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { readFile, unlink } from 'fs/promises'
 import { existsSync } from 'fs'
 import log from 'electron-log'
@@ -110,11 +110,15 @@ export class YtdlpService {
     const cookieArgs = effectiveCookies ? ['--cookies', effectiveCookies] : []
 
     return new Promise((resolve, reject) => {
+      const ffmpegDir = this.ffmpegPath ? dirname(this.ffmpegPath) : undefined
+      const ffmpegArgs = ffmpegDir ? ['--ffmpeg-location', ffmpegDir] : []
+
       this.process = execFile(
         this.ytdlpPath,
         [
           '-x',
           '--user-agent', USER_AGENT,
+          ...ffmpegArgs,
           ...cookieArgs,
           ...playlistArgs,
           '-o', rawFile, url
