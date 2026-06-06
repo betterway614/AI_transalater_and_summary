@@ -13,6 +13,7 @@ const HEADER_SIZE = 44
 
 export function useURLAudio() {
   const setStatus = useAppStore((s) => s.setStatus)
+  const clearEntries = useSubtitleStore((s) => s.clearEntries)
   const addEntry = useSubtitleStore((s) => s.addEntry)
   const createEntry = useSubtitleStore((s) => s.createEntry)
   const updateEntry = useSubtitleStore((s) => s.updateEntry)
@@ -61,6 +62,7 @@ export function useURLAudio() {
   const start = useCallback(async (url: string, mode: InputMode, options?: { partIndex?: number }) => {
     cancelledRef.current = false
     progressRef.current = 0
+    clearEntries() // Clear previous video's entries before starting new one
     setStatus('connecting')
 
     try {
@@ -119,7 +121,7 @@ export function useURLAudio() {
       console.error('[useURLAudio] Fatal error in start():', err)
       setStatus('error')
     }
-  }, [setStatus, addEntry, createEntry, getWhisper, getDeepSeek, updateEntry, markFinal])
+  }, [setStatus, clearEntries, addEntry, createEntry, getWhisper, getDeepSeek, updateEntry, markFinal])
 
   const translateEntry = useCallback(async (entry: SubtitleEntry) => {
     const deepseek = getDeepSeek()

@@ -35,6 +35,7 @@ function MindMapCanvas({
   const theme = useTheme()
   const isDark = theme.palette.mode === 'dark'
   const [zoomLevel, setZoomLevel] = useState(1)
+  const zoomLevelRef = useRef(1)
 
   // Theme-aware markmap options
   const getMarkmapOptions = useCallback(() => ({
@@ -83,7 +84,27 @@ function MindMapCanvas({
       mmRef.current = Markmap.create(svgRef.current, options)
       mmRef.current.setData(root)
     }
-  }, [markdown, getMarkmapOptions])
+
+    // Disable markmap's built-in d3-zoom to prevent conflict with custom CSS zoom.
+    // d3-zoom attaches a non-enumerable __zoom property on the SVG element.
+    // We remove it and block wheel events from reaching d3-zoom.
+    const svg = svgRef.current
+    try { delete (svg as any).__zoom } catch { /* ignore */ }
+
+    // Intercept wheel on the container to use our custom zoom instead of d3-zoom
+    const container = containerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const delta = e.deltaY > 0 ? 0.9 : 1.1
+      applyZoom(zoomLevelRef.current * delta)
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => { container.removeEventListener('wheel', handleWheel) }
+  }, [markdown, getMarkmapOptions, applyZoom])
 
   useEffect(() => {
     return () => { mmRef.current = null }
@@ -99,6 +120,7 @@ function MindMapCanvas({
     g.style.transformOrigin = 'center center'
     g.style.transform = `scale(${clamped})`
     setZoomLevel(clamped)
+    zoomLevelRef.current = clamped
     setTimeout(() => { g.style.transition = '' }, 250)
   }, [])
 
