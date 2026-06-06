@@ -125,13 +125,9 @@ export function useURLAudio() {
 
   const translateEntry = useCallback(async (entry: SubtitleEntry) => {
     const deepseek = getDeepSeek()
-    const context = useSubtitleStore.getState()
-      .entries.filter((e) => e.isFinal && e.id !== entry.id)
-      .slice(-1)
-      .map((e) => e.originalText)
 
     let finalTranslation = ''
-    for await (const chunk of deepseek.streamingTranslate(entry.originalText, context)) {
+    for await (const chunk of deepseek.streamingTranslate(entry.originalText)) {
       if (cancelledRef.current) return
       finalTranslation = chunk.text
       updateEntry(entry.id, finalTranslation)
