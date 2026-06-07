@@ -19,6 +19,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import { WHISPER_PRESETS, TRANSLATOR_PRESETS, WHISPER_LANGUAGES } from '@shared/constants'
 import type { APIPreset } from '@shared/constants'
 import PlatformLoginSection from '../components/Auth/PlatformLoginSection'
+import TemplateManager from '../components/Settings/TemplateManager'
 
 function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
@@ -103,7 +104,7 @@ export default function SettingsPage() {
     : [settings.ai.translator.model]
 
   const handleTestWhisper = async () => {
-    setWhisperTest({ status: '测试中...', ok: null })
+    setWhisperTest({ status: '测试中…', ok: null })
     try {
       const result = await window.api.ai.testConnection({
         baseUrl: settings.ai.whisper.baseUrl,
@@ -119,7 +120,7 @@ export default function SettingsPage() {
   }
 
   const handleTestTranslator = async () => {
-    setTranslatorTest({ status: '测试中...', ok: null })
+    setTranslatorTest({ status: '测试中…', ok: null })
     try {
       const result = await window.api.ai.testConnection({
         baseUrl: settings.ai.translator.baseUrl,
@@ -176,7 +177,7 @@ export default function SettingsPage() {
         sx={{
           textTransform: 'none',
           fontWeight: 600,
-          transition: 'all 0.15s ease',
+          transition: 'background-color 0.15s ease, transform 0.15s ease',
           '&:hover': { transform: 'translateY(-1px)' }
         }}
       >
@@ -417,24 +418,7 @@ export default function SettingsPage() {
       {/* AI 总结设置 */}
       <Paper elevation={0} sx={paperSx}>
         <SectionHeader icon={<AutoAwesomeIcon fontSize="small" />} title="AI 总结设置" />
-
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          自定义总结提示词（留空使用默认）
-        </Typography>
-        <TextField
-          fullWidth
-          size="small"
-          multiline
-          minRows={3}
-          maxRows={6}
-          value={settings.general.summaryPrompt}
-          onChange={(e) => updateGeneral({ summaryPrompt: e.target.value })}
-          placeholder="你是一位专业的知识整理与会议记录分析师。请将内容整理为结构化的思维导图大纲..."
-          sx={{ mb: 1 }}
-        />
-        <Typography variant="caption" color="text.disabled">
-          自定义 prompt 会替换默认的总结系统提示词。留空则使用默认提示词。
-        </Typography>
+        <TemplateManager />
       </Paper>
 
       {/* 视频平台登录 */}

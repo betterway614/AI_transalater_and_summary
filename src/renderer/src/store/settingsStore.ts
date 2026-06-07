@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { AppSettings } from '@shared/types'
-import { DEFAULT_SETTINGS } from '@shared/types'
+import type { AppSettings, SummaryTemplate } from '@shared/types'
+import { DEFAULT_SETTINGS, BUILT_IN_TEMPLATES } from '@shared/types'
 
 interface SettingsState {
   settings: AppSettings
@@ -12,6 +12,11 @@ interface SettingsState {
   updateGeneral: (partial: Partial<AppSettings['general']>) => void
   loadSettings: (settings: AppSettings) => void
   init: () => Promise<void>
+  // 模板 CRUD
+  saveTemplate: (template: SummaryTemplate) => void
+  deleteTemplate: (id: string) => void
+  setActiveTemplate: (id: string) => void
+  resetBuiltInTemplates: () => void
 }
 
 function deepMerge<T extends Record<string, any>>(defaults: T, saved: Partial<T>): T {
@@ -44,6 +49,29 @@ function persist(settings: AppSettings) {
       }
     })
     .catch((err) => console.error('[Settings] Persist IPC error:', err))
+}
+
+function migrateTemplates(settings: AppSettings): AppSettings {
+  if (settings.general.summaryTemplates?.length > 0) return settings
+  const templates = BUILT_IN_TEMPLATES.map((t) => ({ ...t }))
+  if (settings.general.summaryPrompt) {
+    templates.push({
+      id: crypto.randomUUID(),
+      name: '旧自定义提示词',
+      icon: 'SettingsIcon',
+      systemPrompt: settings.general.summaryPrompt,
+      userMessageTemplate: '请对以下内容生成结构化的思维导图大纲：\n\n{{content}}',
+      isBuiltIn: false,
+    })
+  }
+  return {
+    ...settings,
+    general: {
+      ...settings.general,
+      summaryTemplates: templates,
+      activeTemplateId: templates[0].id,
+    },
+  }
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -92,7 +120,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const saved = (await window.api?.store.get('settings')) as AppSettings | undefined
       console.log('[Settings] Loaded from disk:', saved ? `apiKey whisper=${saved.ai?.whisper?.apiKey ? 'YES' : 'NO'}, translator=${saved.ai?.translator?.apiKey ? 'YES' : 'NO'}` : 'null')
       if (saved) {
-        set({ settings: deepMerge(DEFAULT_SETTINGS, saved), isLoaded: true })
+        const merged = deepMerge(DEFAULT_SETTINGS, saved)
+        const migrated = migrateTemplates(merged)
+        set({ settings: migrated, isLoaded: true })
+        if (migrated.general.summaryTemplates !== merged.general.summaryTemplates) {
+          persist(migrated)
+        }
       } else {
         set({ isLoaded: true })
       }
@@ -100,5 +133,56 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       console.error('[Settings] Load failed:', err)
       set({ isLoaded: true })
     }
-  }
+  },
+
+  saveTemplate: (template) =>
+    set((state) => {
+      const templates = state.settings.general.summaryTemplates
+      const idx = templates.findIndex((t) => t.id === template.id)
+      const nextTemplates = idx >= 0
+        ? [...templates.slice(0, idx), template, ...templates.slice(idx + 1)]
+        : [...templates, template]
+      const next = {
+        ...state.settings,
+        general: { ...state.settings.general, summaryTemplates: nextTemplates },
+      }
+      persist(next)
+      return { settings: next }
+    }),
+
+  deleteTemplate: (id) =>
+    set((state) => {
+      const templates = state.settings.general.summaryTemplates.filter((t) => t.id !== id)
+      const activeId = state.settings.general.activeTemplateId === id
+        ? (templates[0]?.id || '')
+        : state.settings.general.activeTemplateId
+      const next = {
+        ...state.settings,
+        general: { ...state.settings.general, summaryTemplates: templates, activeTemplateId: activeId },
+      }
+      persist(next)
+      return { settings: next }
+    }),
+
+  setActiveTemplate: (id) =>
+    set((state) => {
+      const next = {
+        ...state.settings,
+        general: { ...state.settings.general, activeTemplateId: id },
+      }
+      persist(next)
+      return { settings: next }
+    }),
+
+  resetBuiltInTemplates: () =>
+    set((state) => {
+      const customTemplates = state.settings.general.summaryTemplates.filter((t) => !t.isBuiltIn)
+      const nextTemplates = [...BUILT_IN_TEMPLATES, ...customTemplates]
+      const next = {
+        ...state.settings,
+        general: { ...state.settings.general, summaryTemplates: nextTemplates },
+      }
+      persist(next)
+      return { settings: next }
+    }),
 }))

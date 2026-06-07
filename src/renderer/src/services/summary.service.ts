@@ -2,7 +2,8 @@ export interface SummaryConfig {
   apiKey: string
   model?: string
   baseUrl?: string
-  summaryPrompt?: string
+  systemPrompt: string
+  userMessage: string
 }
 
 export interface SummaryResult {
@@ -10,48 +11,29 @@ export interface SummaryResult {
   isDone: boolean
 }
 
-const SUMMARY_SYSTEM_PROMPT = `你是一位专业的知识整理与会议记录分析师。
-
-你的任务是将翻译后的演讲/会议/课程内容整理为结构化的思维导图大纲。
-
-输出规范：
-- 严格使用 Markdown 标题层级格式
-- 一级标题（#）：仅 1 个，为整个内容的主题
-- 二级标题（##）：3-7 个主要议题/章节
-- 三级标题（###）：每个议题下的 2-5 个关键要点
-- 四级列表（-）：补充细节、数据、例子
-
-内容要求：
-- 语言统一为中文
-- 相似内容合并，避免重复
-- 保持逻辑顺序（按内容时间线或主题分组）
-- 每个节点文字精炼，适合在思维导图节点中显示（不超过 20 字为佳）
-- 去除口语化重复和无意义语气词
-- 保留关键数据、人名、专业术语`
-
 export class SummaryService {
   private apiKey: string
   private model: string
   private baseUrl: string
-  private customPrompt: string
+  private systemPrompt: string
+  private userMessage: string
 
   constructor(config: SummaryConfig) {
     this.apiKey = config.apiKey
     this.model = config.model || 'deepseek-chat'
     this.baseUrl = config.baseUrl || 'https://api.deepseek.com'
-    this.customPrompt = config.summaryPrompt || ''
+    this.systemPrompt = config.systemPrompt
+    this.userMessage = config.userMessage
   }
 
   async *streamingSummarize(text: string): AsyncGenerator<SummaryResult> {
-    const systemPrompt = this.customPrompt || SUMMARY_SYSTEM_PROMPT
-
     const result = await window.api.ai.chatCompletion({
       baseUrl: this.baseUrl,
       apiKey: this.apiKey,
       model: this.model,
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `请对以下内容生成结构化的思维导图大纲：\n\n${text}` }
+        { role: 'system', content: this.systemPrompt },
+        { role: 'user', content: this.userMessage.replace('{{content}}', text) }
       ],
       temperature: 0.3,
       maxTokens: 4096

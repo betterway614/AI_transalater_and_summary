@@ -48,14 +48,18 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
     try {
       const settings = useSettingsStore.getState().settings
       const { apiKey, baseUrl, model } = settings.ai.translator
-      const customPrompt = settings.general.summaryPrompt || ''
 
       if (!apiKey) {
-        set({ summary: '请先在设置中配置 DeepSeek API Key' })
+        set({ summary: '请先在设置中配置 API Key' })
         return
       }
 
-      const service = new SummaryService({ apiKey, model, baseUrl, summaryPrompt: customPrompt })
+      const templates = settings.general.summaryTemplates
+      const template = templates.find((t) => t.id === settings.general.activeTemplateId) || templates[0]
+      const systemPrompt = template?.systemPrompt || ''
+      const userMessage = template?.userMessageTemplate || '{{content}}'
+
+      const service = new SummaryService({ apiKey, model, baseUrl, systemPrompt, userMessage })
 
       const fullText = confirmedEntries
         .map((e) => `${e.originalText}\n${e.translatedText}`)
