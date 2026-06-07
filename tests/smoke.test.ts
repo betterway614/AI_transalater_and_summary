@@ -5,7 +5,9 @@ const mockApi = {
   ai: { transcribe: vi.fn(), chatCompletion: vi.fn(), testConnection: vi.fn() },
   store: {
     get: vi.fn().mockResolvedValue(null),
-    set: vi.fn().mockResolvedValue({ success: true })
+    set: vi.fn().mockResolvedValue({ success: true }),
+    getSecret: vi.fn().mockResolvedValue(null),
+    setSecret: vi.fn().mockResolvedValue(undefined),
   },
   ytdlp: {
     onProgress: vi.fn().mockReturnValue(() => {}),

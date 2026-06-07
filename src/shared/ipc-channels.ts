@@ -25,6 +25,10 @@ export const IPC_CHANNELS = {
   // 存储
   STORE_GET: 'store:get',
   STORE_SET: 'store:set',
+  STORE_GET_SECRET: 'store:get-secret',
+  STORE_SET_SECRET: 'store:set-secret',
+  STORE_GET_STATS: 'store:get-stats',
+  STORE_CLEANUP: 'store:cleanup',
 
   // 导出
   EXPORT_MARKDOWN: 'export:markdown',

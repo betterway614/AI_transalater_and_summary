@@ -59,7 +59,13 @@ const api = {
 
   store: {
     get: (key: string) => ipcRenderer.invoke(IPC_CHANNELS.STORE_GET, key),
-    set: (key: string, value: unknown) => ipcRenderer.invoke(IPC_CHANNELS.STORE_SET, key, value)
+    set: (key: string, value: unknown) => ipcRenderer.invoke(IPC_CHANNELS.STORE_SET, key, value),
+    getSecret: (key: string): Promise<string | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STORE_GET_SECRET, key),
+    setSecret: (key: string, value: string): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STORE_SET_SECRET, key, value),
+    getStats: (): Promise<any> => ipcRenderer.invoke(IPC_CHANNELS.STORE_GET_STATS),
+    cleanup: (keepDays: number): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.STORE_CLEANUP, keepDays),
   },
 
   ytdlp: {

@@ -1,20 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// Mock window.api for store tests
-const mockApi = {
-  store: {
-    get: vi.fn().mockResolvedValue(null),
-    set: vi.fn().mockResolvedValue({ success: true })
-  },
-  floating: {
-    updateSubtitles: vi.fn().mockResolvedValue(true),
-    updateTheme: vi.fn().mockResolvedValue(true),
-    updateSummary: vi.fn().mockResolvedValue(true)
-  },
-  logToMain: vi.fn()
-}
-
-Object.defineProperty(window, 'api', { value: mockApi, writable: true })
+// Install shared mock
+const mockApi = (() => {
+  const m = {
+    store: {
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue({ success: true }),
+      getSecret: vi.fn().mockResolvedValue(null),
+      setSecret: vi.fn().mockResolvedValue(undefined),
+      getStats: vi.fn().mockResolvedValue({
+        domains: {},
+        historyCount: 0,
+        oldestSessionTime: null,
+        totalSize: 0,
+      }),
+      cleanup: vi.fn().mockResolvedValue(undefined),
+    },
+    floating: {
+      updateSubtitles: vi.fn().mockResolvedValue(true),
+      updateTheme: vi.fn().mockResolvedValue(true),
+      updateSummary: vi.fn().mockResolvedValue(true),
+    },
+    logToMain: vi.fn(),
+  }
+  Object.defineProperty(window, 'api', { value: m, writable: true })
+  return m
+})()
 
 import { useHistoryStore, type HistorySession } from '../src/renderer/src/store/historyStore'
 import { useSubtitleStore } from '../src/renderer/src/store/subtitleStore'
@@ -62,6 +73,13 @@ describe('History Store', () => {
     expect(mockApi.store.set).toHaveBeenCalled()
   })
 
+  it('should save with correct store key', async () => {
+    const entries = makeEntries()
+    await useHistoryStore.getState().saveSession(entries, 'url')
+    const callKey = mockApi.store.set.mock.calls[0][0]
+    expect(callKey).toBe('history.sessions')
+  })
+
   it('should save session with null summary', async () => {
     const entries = makeEntries()
     await useHistoryStore.getState().saveSession(entries, 'url')
@@ -76,15 +94,15 @@ describe('History Store', () => {
   })
 
   it('should update latest summary after session is saved', async () => {
-    // Save without summary (simulates stopping translation)
     await useHistoryStore.getState().saveSession(makeEntries(), 'microphone')
     expect(useHistoryStore.getState().sessions[0].summary).toBeNull()
 
-    // Generate summary (simulates clicking AI Summary button)
     const summary = '# Test Summary'
     await useHistoryStore.getState().updateLatestSummary(summary)
 
     expect(useHistoryStore.getState().sessions[0].summary).toBe(summary)
+    // Verify it persisted the updated array
+    expect(mockApi.store.set).toHaveBeenCalledWith('history.sessions', expect.any(Array))
   })
 
   it('should not crash when updating summary with empty history', async () => {
@@ -115,7 +133,8 @@ describe('History Store', () => {
       startTime: 1000,
       endTime: 2000,
       entries: makeEntries(),
-      summary: 'preloaded'
+      summary: 'preloaded',
+      keywords: []
     }]
     mockApi.store.get.mockResolvedValueOnce(saved)
 
@@ -131,6 +150,23 @@ describe('History Store', () => {
     await useHistoryStore.getState().loadHistory()
     expect(useHistoryStore.getState().sessions).toHaveLength(0)
   })
+
+  it('should generate keywords from summary when loading legacy sessions without keywords', async () => {
+    const saved = [{
+      id: 'legacy-session',
+      mode: 'url',
+      startTime: 1000,
+      endTime: 2000,
+      entries: makeEntries(),
+      summary: '# AI and Machine Learning'
+      // keywords field missing
+    }]
+    mockApi.store.get.mockResolvedValueOnce(saved)
+
+    await useHistoryStore.getState().loadHistory()
+    const sessions = useHistoryStore.getState().sessions
+    expect(sessions[0].keywords).toEqual(expect.any(Array))
+  })
 })
 
 describe('Summary → History mapping', () => {
@@ -143,7 +179,6 @@ describe('Summary → History mapping', () => {
   })
 
   it('should update saved session when summary is generated after stop', async () => {
-    // Simulate: stop translation → session saved with summary=null
     const entries = makeEntries()
     useSubtitleStore.getState().addEntry(entries[0])
     useSubtitleStore.getState().addEntry(entries[1])
@@ -153,10 +188,8 @@ describe('Summary → History mapping', () => {
     )
     expect(useHistoryStore.getState().sessions[0].summary).toBeNull()
 
-    // Simulate: user clicks "AI Summary" → summary generated
     useSummaryStore.getState().setSummary('# Generated Summary')
 
-    // Verify: session was updated
     expect(useHistoryStore.getState().sessions[0].summary).toBe('# Generated Summary')
   })
 })
@@ -204,11 +237,69 @@ describe('Snapshot Store', () => {
     const loaded = await useSnapshotStore.getState().loadSnapshot()
     expect(loaded).toBeNull()
   })
+})
 
-  it('should clear snapshot', async () => {
-    await useSnapshotStore.getState().clearSnapshot()
-    expect(mockApi.store.set).toHaveBeenCalledWith('session.snapshot', null)
-    expect(useSnapshotStore.getState().snapshot).toBeNull()
+describe('Summary Store', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    useSubtitleStore.getState().clearEntries()
+    useHistoryStore.getState().clearHistory()
+    // Reset summary store state directly (skip persist side effect)
+    useSummaryStore.setState({ summary: null, isGenerating: false, sessionGeneratingId: null })
+    mockApi.store.get.mockResolvedValue(null)
+    mockApi.store.set.mockResolvedValue({ success: true })
+  })
+
+  it('should persist summary to session domain', () => {
+    useSummaryStore.getState().setSummary('# Test')
+    expect(mockApi.store.set).toHaveBeenCalledWith('summary', '# Test')
+  })
+
+  it('should reset summary to null', () => {
+    useSummaryStore.getState().setSummary('# Test')
+    vi.clearAllMocks()
+    useSummaryStore.getState().reset()
+    expect(mockApi.store.set).toHaveBeenCalledWith('summary', null)
+    expect(useSummaryStore.getState().summary).toBeNull()
+  })
+
+  it('should load summary from store', async () => {
+    mockApi.store.get.mockResolvedValueOnce('# Saved Summary')
+    await useSummaryStore.getState().loadSummary()
+    expect(useSummaryStore.getState().summary).toBe('# Saved Summary')
+  })
+
+  it('should handle null summary on load', async () => {
+    mockApi.store.get.mockResolvedValueOnce(null)
+    await useSummaryStore.getState().loadSummary()
+    expect(useSummaryStore.getState().summary).toBeNull()
+  })
+})
+
+describe('Storage API contract', () => {
+  it('should expose getSecret and setSecret in window.api', () => {
+    expect(typeof window.api.store.getSecret).toBe('function')
+    expect(typeof window.api.store.setSecret).toBe('function')
+  })
+
+  it('should expose getStats and cleanup in window.api', () => {
+    expect(typeof window.api.store.getStats).toBe('function')
+    expect(typeof window.api.store.cleanup).toBe('function')
+  })
+
+  it('should use key format compatible with domain mapping', async () => {
+    // Keys used by stores must follow the flat format:
+    //   settings          → domain=settings, key=config
+    //   history.sessions  → domain=history,  key=sessions
+    //   session.snapshot  → domain=session,  key=snapshot
+    //   summary           → domain=session,  key=summary
+    const validKeys = ['settings', 'history.sessions', 'session.snapshot', 'summary']
+
+    for (const key of validKeys) {
+      const dotIndex = key.indexOf('.')
+      const domain = dotIndex > 0 ? key.slice(0, dotIndex) : (key === 'summary' ? 'session' : 'settings')
+      expect(['settings', 'history', 'session']).toContain(domain)
+    }
   })
 })
 

@@ -37,18 +37,38 @@ function deepMerge<T extends Record<string, any>>(defaults: T, saved: Partial<T>
 }
 
 function persist(settings: AppSettings) {
-  const hasWhisperKey = !!settings.ai.whisper.apiKey
-  const hasTranslatorKey = !!settings.ai.translator.apiKey
-  console.log(`[Settings] Persisting: whisperKey=${hasWhisperKey}, translatorKey=${hasTranslatorKey}`)
-  window.api?.store.set('settings', settings)
+  // Strip API keys from settings — they are stored via safeStorage
+  const settingsWithoutSecrets: AppSettings = {
+    ...settings,
+    ai: {
+      ...settings.ai,
+      whisper: { ...settings.ai.whisper, apiKey: '' },
+      translator: { ...settings.ai.translator, apiKey: '' },
+    },
+  }
+
+  console.log('[Settings] Persisting config (secrets stored separately)')
+  window.api?.store.set('settings', settingsWithoutSecrets)
     .then((result: any) => {
       if (result?.success === false) {
-        console.error('[Settings] Persist failed on main process:', result.error)
+        console.error('[Settings] Persist config failed:', result.error)
       } else {
-        console.log('[Settings] Persist success')
+        console.log('[Settings] Persist config success')
       }
     })
-    .catch((err) => console.error('[Settings] Persist IPC error:', err))
+    .catch((err) => console.error('[Settings] Persist config IPC error:', err))
+
+  // Store API keys via safeStorage
+  const whisperKey = settings.ai.whisper.apiKey
+  const translatorKey = settings.ai.translator.apiKey
+  if (whisperKey) {
+    window.api?.store.setSecret('whisperApiKey', whisperKey)
+      .catch((err) => console.error('[Settings] Persist whisperApiKey error:', err))
+  }
+  if (translatorKey) {
+    window.api?.store.setSecret('translatorApiKey', translatorKey)
+      .catch((err) => console.error('[Settings] Persist translatorApiKey error:', err))
+  }
 }
 
 function migrateTemplates(settings: AppSettings): AppSettings {
@@ -118,9 +138,25 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   init: async () => {
     try {
       const saved = (await window.api?.store.get('settings')) as AppSettings | undefined
-      console.log('[Settings] Loaded from disk:', saved ? `apiKey whisper=${saved.ai?.whisper?.apiKey ? 'YES' : 'NO'}, translator=${saved.ai?.translator?.apiKey ? 'YES' : 'NO'}` : 'null')
+      console.log('[Settings] Loaded config from disk:', saved ? 'OK' : 'null')
+
       if (saved) {
         const merged = deepMerge(DEFAULT_SETTINGS, saved)
+
+        // Load API keys from safeStorage
+        try {
+          const whisperKey = await window.api?.store.getSecret('whisperApiKey')
+          const translatorKey = await window.api?.store.getSecret('translatorApiKey')
+          if (whisperKey) merged.ai.whisper.apiKey = whisperKey
+          if (translatorKey) merged.ai.translator.apiKey = translatorKey
+          console.log('[Settings] Secrets loaded:', {
+            whisper: !!whisperKey,
+            translator: !!translatorKey,
+          })
+        } catch (err) {
+          console.error('[Settings] Failed to load secrets:', err)
+        }
+
         const migrated = migrateTemplates(merged)
         set({ settings: migrated, isLoaded: true })
         if (migrated.general.summaryTemplates !== merged.general.summaryTemplates) {

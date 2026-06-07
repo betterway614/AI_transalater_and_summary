@@ -5,16 +5,18 @@ const mockApi = {
   ai: { transcribe: vi.fn(), chatCompletion: vi.fn(), testConnection: vi.fn() },
   store: {
     get: vi.fn().mockResolvedValue(null),
-    set: vi.fn().mockResolvedValue({ success: true })
+    set: vi.fn().mockResolvedValue({ success: true }),
+    getSecret: vi.fn().mockResolvedValue(null),
+    setSecret: vi.fn().mockResolvedValue(undefined),
   },
   floating: {
     updateSubtitles: vi.fn().mockResolvedValue(true),
     updateTheme: vi.fn().mockResolvedValue(true),
     updateSummary: vi.fn().mockResolvedValue(true),
     show: vi.fn().mockResolvedValue(true),
-    hide: vi.fn().mockResolvedValue(true)
+    hide: vi.fn().mockResolvedValue(true),
   },
-  logToMain: vi.fn()
+  logToMain: vi.fn(),
 }
 
 Object.defineProperty(window, 'api', { value: mockApi, writable: true })

@@ -26,12 +26,19 @@ export default function App() {
   } | null>(null)
 
   useEffect(() => {
-    init()
-    loadHistory()
-    loadSummary()
+    // Sequence init: settings first (required by other stores), then parallel load
+    const boot = async () => {
+      // Step 1: Load settings (includes API keys from safeStorage) — must finish before anything else
+      await init()
 
-    // Check for crash recovery snapshot
-    useSnapshotStore.getState().loadSnapshot().then((snapshot) => {
+      // Step 2: Load history and summary in parallel
+      await Promise.all([
+        loadHistory(),
+        loadSummary(),
+      ])
+
+      // Step 3: Check for crash recovery snapshot
+      const snapshot = await useSnapshotStore.getState().loadSnapshot()
       if (snapshot) {
         setRecoverDialog({
           entries: snapshot.entries,
@@ -39,7 +46,8 @@ export default function App() {
           mode: snapshot.mode
         })
       }
-    })
+    }
+    boot()
   }, [init, loadHistory, loadSummary])
 
   // Start/stop snapshot interval based on translation status

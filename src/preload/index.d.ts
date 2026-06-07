@@ -17,10 +17,21 @@ interface ElectronAPI {
     onSummaryUpdate: (callback: (summary: string | null) => void) => () => void
     updateSubtitleSettings: (settings: import('../shared/types').SubtitleSettings) => Promise<boolean>
     onSubtitleSettingsUpdate: (callback: (settings: import('../shared/types').SubtitleSettings) => void) => () => void
+    setDisplayMode: (mode: string) => void
+    onDisplayModeChange: (callback: (mode: string) => void) => () => void
   }
   store: {
     get: (key: string) => Promise<unknown>
-    set: (key: string, value: unknown) => Promise<void>
+    set: (key: string, value: unknown) => Promise<{ success: boolean; error?: string }>
+    getSecret: (key: string) => Promise<string | null>
+    setSecret: (key: string, value: string) => Promise<void>
+    getStats: () => Promise<{
+      domains: Record<string, { fileSize: number; exists: boolean }>
+      historyCount: number
+      oldestSessionTime: number | null
+      totalSize: number
+    }>
+    cleanup: (keepDays: number) => Promise<void>
   }
   ytdlp: {
     extractAudio: (url: string, partIndex?: number, cookiesPath?: string) => Promise<{ success: boolean; data?: ArrayBuffer; error?: string }>
