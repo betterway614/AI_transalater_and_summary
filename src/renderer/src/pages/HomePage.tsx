@@ -15,6 +15,8 @@ import { useAudioCapture } from '../hooks/useAudioCapture'
 import { useSystemAudioCapture } from '../hooks/useSystemAudio'
 import { useURLAudio } from '../hooks/useURLAudio'
 
+import type { SubtitleDisplayMode } from '@shared/types'
+
 const log = (...args: unknown[]) => { console.log(...args); window.api?.logToMain('info', ...args) }
 
 export default function HomePage() {
@@ -23,6 +25,7 @@ export default function HomePage() {
   const startTranslation = useAppStore((s) => s.startTranslation)
   const stopTranslation = useAppStore((s) => s.stopTranslation)
   const { processAudioChunk } = useSubtitle()
+  const updateSubtitle = useSettingsStore((s) => s.updateSubtitle)
 
   // Sync subtitles to floating window via IPC — debounced to avoid flooding
   const entries = useSubtitleStore((s) => s.entries)
@@ -56,6 +59,14 @@ export default function HomePage() {
   useEffect(() => {
     window.api?.floating.updateSubtitleSettings(subtitleSettings)
   }, [subtitleSettings])
+
+  // Listen for display mode changes from floating window toggle
+  useEffect(() => {
+    const unsub = window.api?.floating.onDisplayModeChange((mode) => {
+      updateSubtitle({ displayMode: mode as SubtitleDisplayMode })
+    })
+    return unsub
+  }, [updateSubtitle])
 
   // Clear previous session when switching input mode
   useEffect(() => {
