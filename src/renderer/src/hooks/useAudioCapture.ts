@@ -1,6 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { resampleAudio, detectVoiceActivity, pcmToWav } from '../services/audio-processor'
 import { useSettingsStore } from '../store/settingsStore'
+import { useAppStore } from '../store/appStore'
 
 const log = (...args: unknown[]) => { console.log(...args); window.api?.logToMain('info', ...args) }
 const logErr = (...args: unknown[]) => { console.error(...args); window.api?.logToMain('error', ...args) }
@@ -146,6 +147,8 @@ export function useAudioCapture(options: AudioCaptureOptions) {
       processor.connect(ctx.destination)
       isCapturingRef.current = true
       setIsCapturing(true)
+      useAppStore.getState().setStatus('listening')
+      log('[MicCapture] Capture started successfully')
     } catch (err) {
       logErr('Failed to start audio capture:', err)
       throw err

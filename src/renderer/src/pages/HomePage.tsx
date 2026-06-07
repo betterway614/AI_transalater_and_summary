@@ -13,6 +13,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import { useSubtitle } from '../hooks/useSubtitle'
 import { useAudioCapture } from '../hooks/useAudioCapture'
 import { useSystemAudioCapture } from '../hooks/useSystemAudio'
+import { useURLAudio } from '../hooks/useURLAudio'
 
 const log = (...args: unknown[]) => { console.log(...args); window.api?.logToMain('info', ...args) }
 
@@ -61,6 +62,7 @@ export default function HomePage() {
   })
 
   const activeAudioLevel = mode === 'system-audio' ? sysAudioLevelRef : audioLevelRef
+  const { start: startUrlAudio, stop: stopUrlAudio, getProgress: getUrlProgress } = useURLAudio()
 
   const clearEntries = useSubtitleStore((s) => s.clearEntries)
 
@@ -84,19 +86,25 @@ export default function HomePage() {
   }, [mode, clearEntries, startTranslation, startMicCapture, startSystemAudio, stopTranslation, setShowFloating])
 
   const handleStop = useCallback(() => {
-    if (mode === 'system-audio') {
+    if (mode === 'url') {
+      stopUrlAudio()
+    } else if (mode === 'system-audio') {
       stopSystemAudio()
     } else {
       stopMicCapture()
     }
     stopTranslation()
-  }, [mode, stopMicCapture, stopSystemAudio, stopTranslation])
+  }, [mode, stopMicCapture, stopSystemAudio, stopUrlAudio, stopTranslation])
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2, gap: 2 }}>
       <ModeTabs />
       {mode === 'url' ? (
-        <URLInputPanel />
+        <URLInputPanel
+          onStartUrl={startUrlAudio}
+          onStopUrl={stopUrlAudio}
+          getDownloadProgress={getUrlProgress}
+        />
       ) : (
         <DeviceSelector onStart={handleStart} onStop={handleStop} />
       )}

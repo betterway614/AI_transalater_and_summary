@@ -4,10 +4,15 @@ import StopIcon from '@mui/icons-material/Stop'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { useState, useCallback, useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
-import { useURLAudio } from '../../hooks/useURLAudio'
-import type { VideoInfo } from '@shared/types'
+import type { VideoInfo, InputMode } from '@shared/types'
 
-export default function URLInputPanel() {
+interface URLInputPanelProps {
+  onStartUrl: (url: string, mode: InputMode, options?: { partIndex?: number }) => void
+  onStopUrl: () => void
+  getDownloadProgress: () => number
+}
+
+export default function URLInputPanel({ onStartUrl, onStopUrl, getDownloadProgress }: URLInputPanelProps) {
   const [url, setUrl] = useState('')
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
   const [selectedPart, setSelectedPart] = useState(0)
@@ -18,7 +23,7 @@ export default function URLInputPanel() {
   const mode = useAppStore((s) => s.mode)
   const startTranslation = useAppStore((s) => s.startTranslation)
   const stopTranslation = useAppStore((s) => s.stopTranslation)
-  const { start, stop, getProgress } = useURLAudio()
+  const setShowFloating = useAppStore((s) => s.setShowFloating)
 
   const [downloadProgress, setDownloadProgress] = useState(0)
 
@@ -27,11 +32,11 @@ export default function URLInputPanel() {
   useEffect(() => {
     if (!isRunning) { setDownloadProgress(0); return }
     const id = setInterval(() => {
-      const p = getProgress()
+      const p = getDownloadProgress()
       setDownloadProgress(p)
     }, 300)
     return () => clearInterval(id)
-  }, [isRunning, getProgress])
+  }, [isRunning, getDownloadProgress])
 
   const fetchInfo = useCallback(async () => {
     if (!url.trim()) return
@@ -58,14 +63,15 @@ export default function URLInputPanel() {
 
   const handleToggle = () => {
     if (isRunning) {
-      stop()
+      onStopUrl()
       stopTranslation()
     } else {
       if (!url.trim()) return
       startTranslation()
-      start(url.trim(), mode, {
+      onStartUrl(url.trim(), mode, {
         partIndex: videoInfo && videoInfo.partCount > 1 ? selectedPart : undefined
       })
+      setShowFloating(true)
     }
   }
 
