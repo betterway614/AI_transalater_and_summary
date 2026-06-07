@@ -22,6 +22,8 @@ export default function URLInputPanel() {
 
   const [downloadProgress, setDownloadProgress] = useState(0)
 
+  const isRunning = status !== 'idle' && status !== 'error'
+
   useEffect(() => {
     if (!isRunning) { setDownloadProgress(0); return }
     const id = setInterval(() => {
@@ -30,8 +32,6 @@ export default function URLInputPanel() {
     }, 300)
     return () => clearInterval(id)
   }, [isRunning, getProgress])
-
-  const isRunning = status !== 'idle' && status !== 'error'
 
   const fetchInfo = useCallback(async () => {
     if (!url.trim()) return
