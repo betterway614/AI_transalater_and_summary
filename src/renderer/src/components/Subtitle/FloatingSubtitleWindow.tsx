@@ -1,11 +1,10 @@
-import { Box, Typography, IconButton, Slider, Tooltip } from '@mui/material'
+import { Box, Typography, IconButton, Slider } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import MinimizeIcon from '@mui/icons-material/Minimize'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import SubtitlesIcon from '@mui/icons-material/Subtitles'
 import OpenWithIcon from '@mui/icons-material/OpenWith'
 import { useEffect, useState, useRef, useCallback } from 'react'
-import type { SubtitleEntry } from '@shared/types'
+import type { SubtitleEntry, SubtitleDisplayMode } from '@shared/types'
 
 const MAX_ENTRIES = 8
 const EXPAND_DELAY = 200
@@ -19,6 +18,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
   const [summary, setSummary] = useState<string | null>(null)
   const [opacity, setOpacity] = useState(0.92)
   const [expanded, setExpanded] = useState(false)
+  const [displayMode, setDisplayMode] = useState<SubtitleDisplayMode>('bilingual')
   const scrollRef = useRef<HTMLDivElement>(null)
   const expandTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -33,6 +33,16 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
   useEffect(() => {
     if (!window.api?.floating) return
     const unsub = window.api.floating.onSummaryUpdate((s) => setSummary(s))
+    return unsub
+  }, [])
+
+  useEffect(() => {
+    if (!window.api?.floating) return
+    const unsub = window.api.floating.onSubtitleSettingsUpdate((settings) => {
+      if (settings.displayMode) {
+        setDisplayMode(settings.displayMode)
+      }
+    })
     return unsub
   }, [])
 
@@ -58,7 +68,6 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
     }, EXPAND_DELAY + 100)
   }, [])
 
-  // Cancel timer on unmount
   useEffect(() => {
     return () => { if (expandTimer.current) clearTimeout(expandTimer.current) }
   }, [])
@@ -70,9 +79,11 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
   const textSecondary = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)'
   const mutedColor = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'
   const accentColor = isDark ? '#ffd54f' : '#e6a100'
+  const colDivider = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
   const resizeGripColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'
 
   const lastEntry = entries.length > 0 ? entries[entries.length - 1] : null
+  const isBilingual = displayMode === 'bilingual'
 
   const handleClose = () => window.api?.floating.hide()
 
@@ -110,19 +121,53 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
         <SubtitlesIcon sx={{ fontSize: 16, color: isDark ? '#60a5fa' : '#1976d2', flexShrink: 0 }} />
 
         {lastEntry ? (
-          <Typography
-            noWrap
-            sx={{
-              fontSize: 12,
-              color: textSecondary,
-              flex: 1,
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            {lastEntry.translatedText || lastEntry.originalText || '...'}
-          </Typography>
+          isBilingual ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+              <Typography
+                noWrap
+                sx={{
+                  fontSize: 11,
+                  color: textSecondary,
+                  fontStyle: lastEntry.isFinal ? 'normal' : 'italic',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  flex: 1,
+                  minWidth: 0
+                }}
+              >
+                {lastEntry.originalText || '...'}
+              </Typography>
+              <Box sx={{ width: 1, height: 10, bgcolor: colDivider, flexShrink: 0 }} />
+              <Typography
+                noWrap
+                sx={{
+                  fontSize: 12,
+                  color: accentColor,
+                  fontWeight: 500,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  flex: 1,
+                  minWidth: 0
+                }}
+              >
+                {lastEntry.translatedText || '...'}
+              </Typography>
+            </Box>
+          ) : (
+            <Typography
+              noWrap
+              sx={{
+                fontSize: 12,
+                color: textPrimary,
+                flex: 1,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {lastEntry.translatedText || lastEntry.originalText || '...'}
+            </Typography>
+          )
         ) : (
           <Typography noWrap sx={{ fontSize: 12, color: mutedColor, flex: 1 }}>
             VoiceBridge
@@ -241,6 +286,27 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
         </Box>
       </Box>
 
+      {/* Column header for bilingual mode */}
+      {isBilingual && entries.length > 0 && (
+        <Box
+          sx={{
+            display: 'flex',
+            px: 2,
+            py: 0.5,
+            gap: 1.5,
+            borderBottom: `1px solid ${borderColor}`,
+            flexShrink: 0
+          }}
+        >
+          <Typography variant="caption" sx={{ color: mutedColor, fontSize: 9, flex: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            检测语音
+          </Typography>
+          <Typography variant="caption" sx={{ color: mutedColor, fontSize: 9, flex: 1, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            中文翻译
+          </Typography>
+        </Box>
+      )}
+
       {/* Subtitle content */}
       <Box
         ref={scrollRef}
@@ -261,9 +327,18 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
               等待翻译...
             </Typography>
           </Box>
-        ) : (
+        ) : isBilingual ? (
           entries.map((entry) => (
-            <Box key={entry.id} sx={{ py: 0.25 }}>
+            <Box
+              key={entry.id}
+              sx={{
+                display: 'flex',
+                gap: 1.5,
+                py: 0.35,
+                borderBottom: `1px solid ${colDivider}`,
+                '&:last-child': { borderBottom: 'none' }
+              }}
+            >
               <Typography
                 variant="body2"
                 sx={{
@@ -271,23 +346,44 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
                   fontSize: 11,
                   lineHeight: 1.5,
                   fontStyle: entry.isFinal ? 'normal' : 'italic',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
+                  flex: 1,
+                  minWidth: 0,
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word'
                 }}
               >
                 {entry.originalText}
               </Typography>
+              <Box sx={{ width: 1, bgcolor: colDivider, flexShrink: 0, alignSelf: 'stretch' }} />
               <Typography
                 variant="body2"
                 sx={{
-                  color: accentColor,
+                  color: entry.translatedText ? accentColor : mutedColor,
                   fontSize: 13,
                   fontWeight: 500,
                   lineHeight: 1.5,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
+                  flex: 1,
+                  minWidth: 0,
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word'
+                }}
+              >
+                {entry.translatedText || '...'}
+              </Typography>
+            </Box>
+          ))
+        ) : (
+          entries.map((entry) => (
+            <Box key={entry.id} sx={{ py: 0.35 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: entry.translatedText ? textPrimary : mutedColor,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  lineHeight: 1.6,
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word'
                 }}
               >
                 {entry.translatedText || '...'}

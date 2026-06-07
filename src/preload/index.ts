@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
-import type { SubtitleEntry } from '../shared/types'
+import type { SubtitleEntry, SubtitleSettings } from '../shared/types'
 
 const api = {
   // 渲染进程 -> 主进程终端日志（绕过 DevTools 可见性问题）
@@ -39,6 +39,13 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, summary: string | null) => callback(summary)
       ipcRenderer.on(IPC_CHANNELS.FLOATING_UPDATE_SUMMARY, handler)
       return () => { ipcRenderer.removeListener(IPC_CHANNELS.FLOATING_UPDATE_SUMMARY, handler) }
+    },
+    updateSubtitleSettings: (settings: SubtitleSettings): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FLOATING_SUBTITLE_SETTINGS_FROM_RENDERER, settings),
+    onSubtitleSettingsUpdate: (callback: (settings: SubtitleSettings) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, settings: SubtitleSettings) => callback(settings)
+      ipcRenderer.on(IPC_CHANNELS.FLOATING_UPDATE_SUBTITLE_SETTINGS, handler)
+      return () => { ipcRenderer.removeListener(IPC_CHANNELS.FLOATING_UPDATE_SUBTITLE_SETTINGS, handler) }
     }
   },
 

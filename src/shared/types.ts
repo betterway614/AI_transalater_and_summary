@@ -60,6 +60,8 @@ export interface AIEngineConfig {
 }
 
 // ===== 字幕显示设置 =====
+export type SubtitleDisplayMode = 'bilingual' | 'chinese-only';
+
 export interface SubtitleSettings {
   fontSize: number;
   originalColor: string;
@@ -67,6 +69,7 @@ export interface SubtitleSettings {
   backgroundColor: string;
   backgroundOpacity: number;
   maxLines: number;
+  displayMode: SubtitleDisplayMode;
 }
 
 // ===== 音频设置 =====
@@ -114,6 +117,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     backgroundColor: '#000000',
     backgroundOpacity: 0.8,
     maxLines: 10,
+    displayMode: 'bilingual',
   },
   audio: {
     inputDevice: 'default',

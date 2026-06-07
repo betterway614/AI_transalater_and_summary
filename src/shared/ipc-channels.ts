@@ -43,6 +43,8 @@ export const IPC_CHANNELS = {
   FLOATING_SUBTITLES_FROM_RENDERER: 'floating:subtitles-from-renderer',
   FLOATING_THEME_FROM_RENDERER: 'floating:theme-from-renderer',
   FLOATING_SUMMARY_FROM_RENDERER: 'floating:summary-from-renderer',
+  FLOATING_SUBTITLE_SETTINGS_FROM_RENDERER: 'floating:subtitle-settings-from-renderer',
+  FLOATING_UPDATE_SUBTITLE_SETTINGS: 'floating:update-subtitle-settings',
 
   // AI API 代理（主进程中转，避免 CORS）
   AI_WHISPER_TRANSCRIBE: 'ai:whisper-transcribe',

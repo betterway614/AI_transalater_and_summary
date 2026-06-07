@@ -352,6 +352,25 @@ export default function SettingsPage() {
         <SectionHeader icon={<SubtitlesIcon fontSize="small" />} title="字幕设置" />
 
         <Typography variant="body2" color="text.secondary" gutterBottom>
+          浮动窗显示模式
+        </Typography>
+        <ToggleButtonGroup
+          value={settings.subtitle.displayMode}
+          exclusive
+          onChange={(_, value) => { if (value) updateSubtitle({ displayMode: value }) }}
+          size="small"
+          fullWidth
+          sx={{ mb: 2 }}
+        >
+          <ToggleButton value="bilingual" sx={{ textTransform: 'none', flex: 1 }}>
+            双语两栏
+          </ToggleButton>
+          <ToggleButton value="chinese-only" sx={{ textTransform: 'none', flex: 1 }}>
+            仅中文
+          </ToggleButton>
+        </ToggleButtonGroup>
+
+        <Typography variant="body2" color="text.secondary" gutterBottom>
           字体大小: {settings.subtitle.fontSize}px
         </Typography>
         <Slider
