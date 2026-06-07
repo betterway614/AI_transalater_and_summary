@@ -128,7 +128,7 @@ export default function DeviceSelector({ onStart, onStop }: DeviceSelectorProps)
           onClick={handleToggle}
           startIcon={isRunning ? <StopIcon /> : <PlayArrowIcon />}
           color={isRunning ? 'error' : 'primary'}
-          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600, transition: 'all 0.15s ease', '&:hover': { transform: 'translateY(-1px)', boxShadow: 2 } }}
+          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600, transition: 'background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease', '&:hover': { transform: 'translateY(-1px)', boxShadow: 2 } }}
         >
           {isRunning ? '停止' : '开始'}
         </Button>

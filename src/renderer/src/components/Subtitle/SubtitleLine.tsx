@@ -6,7 +6,7 @@ interface SubtitleLineProps {
   fontSize?: number
 }
 
-export default function SubtitleLine({ entry, fontSize = 16 }: SubtitleLineProps) {
+export default function SubtitleLine({ entry, fontSize = 14 }: SubtitleLineProps) {
   return (
     <Box
       sx={{
@@ -37,14 +37,14 @@ export default function SubtitleLine({ entry, fontSize = 16 }: SubtitleLineProps
       <Typography
         variant="body1"
         sx={{
-          fontSize: fontSize + 2,
+          fontSize: fontSize + 4,
           color: 'secondary.main',
           fontWeight: 500,
           lineHeight: 1.6,
           transition: 'color 0.2s ease'
         }}
       >
-        {entry.translatedText || '...'}
+        {entry.translatedText || '…'}
       </Typography>
       {entry.correctedFrom && (
         <Typography variant="caption" sx={{ color: 'text.disabled', textDecoration: 'line-through' }}>

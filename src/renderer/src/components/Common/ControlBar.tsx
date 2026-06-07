@@ -1,4 +1,4 @@
-import { Box, IconButton, Tooltip } from '@mui/material'
+import { Box, IconButton, Tooltip, Snackbar, Alert } from '@mui/material'
 import PauseIcon from '@mui/icons-material/Pause'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
@@ -31,6 +31,7 @@ export default function ControlBar({ onStart, onStop, audioLevelRef }: ControlBa
 
   const isRunning = status !== 'idle' && status !== 'error'
   const [levelPercent, setLevelPercent] = useState(0)
+  const [toast, setToast] = useState<string | null>(null)
 
   // Audio level polling
   useEffect(() => {
@@ -78,23 +79,26 @@ export default function ControlBar({ onStart, onStop, audioLevelRef }: ControlBa
     if (!window.api) return
     const content = formatMarkdown(entries)
     await window.api.exportMarkdown(content, 'translation.md')
+    setToast('已导出 translation.md')
   }
 
   const handleCopy = () => {
     const content = entries.map((e) => `${e.originalText}\n${e.translatedText}`).join('\n\n')
     navigator.clipboard.writeText(content)
+    setToast('已复制到剪贴板')
   }
 
   const handleCopyPlainText = () => {
     const content = formatPlainText(entries, summary)
     navigator.clipboard.writeText(content)
+    setToast('纯文本(含总结)已复制到剪贴板')
   }
 
   const iconBtnSx = {
     width: 32,
     height: 32,
     borderRadius: 1.5,
-    transition: 'all 0.15s ease',
+    transition: 'background-color 0.15s ease, transform 0.15s ease',
     '&:hover': {
       bgcolor: 'var(--hover-glow)',
       transform: 'scale(1.08)'
@@ -149,13 +153,14 @@ export default function ControlBar({ onStart, onStop, audioLevelRef }: ControlBa
               <IconButton
                 size="small"
                 onClick={isPaused ? resumeTranslation : pauseTranslation}
+                aria-label={isPaused ? '恢复翻译' : '暂停翻译'}
                 sx={iconBtnSx}
               >
                 {isPaused ? <PlayArrowIcon fontSize="small" /> : <PauseIcon fontSize="small" />}
               </IconButton>
             </Tooltip>
             <Tooltip title="停止 (Ctrl+Enter)" arrow>
-              <IconButton size="small" onClick={handleStop} color="error" sx={iconBtnSx}>
+              <IconButton size="small" onClick={handleStop} color="error" aria-label="停止翻译" sx={iconBtnSx}>
                 <StopIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -169,6 +174,7 @@ export default function ControlBar({ onStart, onStop, audioLevelRef }: ControlBa
             size="small"
             onClick={() => setShowFloating(!showFloating)}
             color={showFloating ? 'primary' : 'default'}
+            aria-label={showFloating ? '隐藏浮动字幕' : '显示浮动字幕'}
             sx={iconBtnSx}
           >
             <SubtitlesIcon fontSize="small" />
@@ -176,26 +182,31 @@ export default function ControlBar({ onStart, onStop, audioLevelRef }: ControlBa
         </Tooltip>
         <Tooltip title="导出 Markdown" arrow>
           <span>
-            <IconButton size="small" onClick={handleExport} disabled={entries.length === 0} sx={iconBtnSx}>
+            <IconButton size="small" onClick={handleExport} disabled={entries.length === 0} aria-label="导出 Markdown" sx={iconBtnSx}>
               <FileDownloadIcon fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>
         <Tooltip title="复制全部" arrow>
           <span>
-            <IconButton size="small" onClick={handleCopy} disabled={entries.length === 0} sx={iconBtnSx}>
+            <IconButton size="small" onClick={handleCopy} disabled={entries.length === 0} aria-label="复制全部字幕" sx={iconBtnSx}>
               <ContentCopyIcon fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>
         <Tooltip title={summary ? '复制纯文本(含总结)' : '复制纯文本'} arrow>
           <span>
-            <IconButton size="small" onClick={handleCopyPlainText} disabled={entries.length === 0} sx={iconBtnSx}>
+            <IconButton size="small" onClick={handleCopyPlainText} disabled={entries.length === 0} aria-label="复制纯文本含总结" sx={iconBtnSx}>
               <TextSnippetIcon fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>
       </Box>
+      <Snackbar open={!!toast} autoHideDuration={2500} onClose={() => setToast(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="success" variant="filled" onClose={() => setToast(null)} sx={{ borderRadius: 1.5 }}>
+          {toast}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

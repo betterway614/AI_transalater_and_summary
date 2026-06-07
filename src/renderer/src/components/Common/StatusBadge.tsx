@@ -8,7 +8,7 @@ const pulse = keyframes`
 
 const statusConfig: Record<AppStatus, { label: string; color: 'default' | 'primary' | 'success' | 'warning' | 'error'; animated: boolean }> = {
   idle: { label: '就绪', color: 'default', animated: false },
-  connecting: { label: '连接中...', color: 'warning', animated: true },
+  connecting: { label: '连接中…', color: 'warning', animated: true },
   listening: { label: '监听中', color: 'primary', animated: true },
   translating: { label: '翻译中', color: 'success', animated: true },
   error: { label: '错误', color: 'error', animated: false }

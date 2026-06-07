@@ -40,7 +40,7 @@ export default function ModeTabs() {
             textTransform: 'none',
             fontWeight: 600,
             fontSize: 14,
-            transition: 'all 0.2s ease',
+            transition: 'color 0.2s ease, background-color 0.2s ease',
             '&:hover': {
               bgcolor: 'var(--hover-glow)'
             }

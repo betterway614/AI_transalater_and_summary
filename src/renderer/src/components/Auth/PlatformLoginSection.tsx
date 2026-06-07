@@ -81,7 +81,7 @@ export default function PlatformLoginSection() {
                 onClick={() => handleLogin(p.id)}
                 disabled={isLoading}
               >
-                {isLoading ? '登录中...' : '扫码登录'}
+                {isLoading ? '登录中…' : '扫码登录'}
               </Button>
             )}
           </Box>
@@ -89,7 +89,7 @@ export default function PlatformLoginSection() {
       })}
 
       {platforms.length === 0 && (
-        <Typography variant="body2" color="text.secondary">Loading...</Typography>
+        <Typography variant="body2" color="text.secondary">加载中…</Typography>
       )}
     </Box>
   )

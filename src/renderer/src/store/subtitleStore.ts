@@ -22,6 +22,8 @@ function nextOrder(): number {
   return ++orderCounter
 }
 
+const MAX_STORE_ENTRIES = 500
+
 export const useSubtitleStore = create<SubtitleState>((set) => ({
   entries: [],
 
@@ -29,9 +31,13 @@ export const useSubtitleStore = create<SubtitleState>((set) => ({
     set((state) => {
       // Insert at correct position by order, maintaining sort
       const pos = state.entries.findIndex((e) => (e as any)._order > (entry as any)._order)
-      const entries = pos === -1
+      let entries = pos === -1
         ? [...state.entries, entry]
         : [...state.entries.slice(0, pos), entry, ...state.entries.slice(pos)]
+      // Prune oldest entries if over limit
+      if (entries.length > MAX_STORE_ENTRIES) {
+        entries = entries.slice(entries.length - MAX_STORE_ENTRIES)
+      }
       return { entries }
     }),
 
@@ -42,11 +48,14 @@ export const useSubtitleStore = create<SubtitleState>((set) => ({
 
   replaceLastEntry: (entry) =>
     set((state) => {
-      const entries = [...state.entries]
+      let entries = [...state.entries]
       if (entries.length > 0 && !entries[entries.length - 1].isFinal) {
         entries[entries.length - 1] = entry
       } else {
         entries.push(entry)
+      }
+      if (entries.length > MAX_STORE_ENTRIES) {
+        entries = entries.slice(entries.length - MAX_STORE_ENTRIES)
       }
       return { entries }
     }),

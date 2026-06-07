@@ -91,7 +91,7 @@ export default function Sidebar() {
                   '&:active': {
                     transform: 'scale(0.95)'
                   },
-                  transition: 'all 0.15s ease'
+                  transition: 'color 0.15s ease, background-color 0.15s ease, transform 0.15s ease'
                 }}
               >
                 {item.icon}

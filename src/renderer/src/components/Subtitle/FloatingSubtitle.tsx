@@ -46,7 +46,7 @@ export default function FloatingSubtitle() {
         WebkitBackdropFilter: 'blur(20px)',
         border: `1px solid ${borderColor}`,
         overflow: 'hidden',
-        zIndex: 9999,
+        zIndex: 'var(--z-floating)',
         boxShadow: isDark
           ? '0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2)'
           : '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)'
@@ -73,6 +73,7 @@ export default function FloatingSubtitle() {
             max={1}
             step={0.05}
             size="small"
+            aria-label="调整透明度"
             sx={{ width: 60, color: mutedColor }}
           />
           <IconButton
@@ -96,7 +97,7 @@ export default function FloatingSubtitle() {
             variant="body2"
             sx={{ textAlign: 'center', py: 2, color: mutedColor }}
           >
-            等待翻译...
+            等待翻译…
           </Typography>
         ) : (
           recentEntries.map((entry) => (
@@ -105,7 +106,7 @@ export default function FloatingSubtitle() {
                 {entry.originalText}
               </Typography>
               <Typography variant="body2" sx={{ color: accentColor, fontSize: 15, fontWeight: 500, lineHeight: 1.4 }}>
-                {entry.translatedText || '...'}
+                {entry.translatedText || '…'}
               </Typography>
             </Box>
           ))

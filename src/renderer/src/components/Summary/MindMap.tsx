@@ -235,7 +235,7 @@ function MindMapCanvas({
     width: 30,
     height: 30,
     borderRadius: 1.5,
-    transition: 'all 0.15s ease',
+    transition: 'background-color 0.15s ease, transform 0.15s ease',
     '&:hover': { bgcolor: 'var(--hover-glow)', transform: 'scale(1.1)' },
     '&:active': { transform: 'scale(0.95)' }
   }
@@ -332,6 +332,9 @@ export default function MindMap({ markdown }: MindMapProps) {
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 1.5 }}>
         <AccountTreeIcon sx={{ fontSize: 48, color: 'text.disabled', opacity: 0.3 }} />
         <Typography variant="body2" color="text.disabled">生成总结后即可查看思维导图</Typography>
+        <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5 }}>
+          在 AI 总结面板中点击生成按钮
+        </Typography>
       </Box>
     )
   }
@@ -341,7 +344,7 @@ export default function MindMap({ markdown }: MindMapProps) {
       <Box sx={{ position: 'relative' }}>
         <MindMapCanvas markdown={markdown} height={400} />
         <Tooltip title="全屏查看" arrow placement="left">
-          <IconButton size="small" onClick={() => setFullscreen(true)} sx={{ position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 1.5, bgcolor: 'action.hover', backdropFilter: 'blur(8px)', transition: 'all 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)', transform: 'scale(1.1)' } }}>
+          <IconButton size="small" onClick={() => setFullscreen(true)} sx={{ position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 1.5, bgcolor: 'action.hover', backdropFilter: 'blur(8px)', transition: 'background-color 0.15s ease, transform 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)', transform: 'scale(1.1)' } }}>
             <FullscreenIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </Tooltip>
@@ -355,7 +358,7 @@ export default function MindMap({ markdown }: MindMapProps) {
               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>思维导图</Typography>
             </Box>
             <Tooltip title="退出全屏" arrow>
-              <IconButton size="small" onClick={() => setFullscreen(false)} sx={{ transition: 'all 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)' } }}>
+              <IconButton size="small" onClick={() => setFullscreen(false)} sx={{ transition: 'background-color 0.15s ease, transform 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)' } }}>
                 <FullscreenExitIcon />
               </IconButton>
             </Tooltip>

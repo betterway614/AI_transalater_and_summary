@@ -76,6 +76,9 @@ export default function SubtitlePanel() {
             <Typography color="text.disabled" variant="body2">
               开始翻译后，字幕将在此显示
             </Typography>
+            <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5 }}>
+              选择上方输入模式开始翻译
+            </Typography>
           </Box>
         ) : (
           displayEntries.map((entry) => <SubtitleLine key={entry.id} entry={entry} fontSize={fontSize} />)

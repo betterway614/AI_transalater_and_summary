@@ -80,42 +80,51 @@ export default function TitleBar() {
         </Tooltip>
 
         {/* Window controls */}
-        <IconButton
-          size="small"
-          onClick={() => window.api?.window.minimize()}
-          sx={{
-            width: 28,
-            height: 28,
-            color: 'text.secondary',
-            '&:hover': { bgcolor: 'action.hover' }
-          }}
-        >
-          <MinimizeIcon fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={() => window.api?.window.maximize()}
-          sx={{
-            width: 28,
-            height: 28,
-            color: 'text.secondary',
-            '&:hover': { bgcolor: 'action.hover' }
-          }}
-        >
-          <CropSquareIcon fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          onClick={() => window.api?.window.close()}
-          sx={{
-            width: 28,
-            height: 28,
-            color: 'text.secondary',
-            '&:hover': { bgcolor: 'error.main', color: 'white' }
-          }}
-        >
-          <CloseIcon fontSize="small" />
-        </IconButton>
+        <Tooltip title="最小化" arrow>
+          <IconButton
+            size="small"
+            onClick={() => window.api?.window.minimize()}
+            aria-label="最小化"
+            sx={{
+              width: 28,
+              height: 28,
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'action.hover' }
+            }}
+          >
+            <MinimizeIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="最大化" arrow>
+          <IconButton
+            size="small"
+            onClick={() => window.api?.window.maximize()}
+            aria-label="最大化/还原"
+            sx={{
+              width: 28,
+              height: 28,
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'action.hover' }
+            }}
+          >
+            <CropSquareIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="关闭" arrow>
+          <IconButton
+            size="small"
+            onClick={() => window.api?.window.close()}
+            aria-label="关闭窗口"
+            sx={{
+              width: 28,
+              height: 28,
+              color: 'text.secondary',
+              '&:hover': { bgcolor: 'error.main', color: 'white' }
+            }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
     </Box>
   )

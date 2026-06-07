@@ -117,7 +117,7 @@ export default function URLInputPanel({ onStartUrl, onStopUrl, getDownloadProgre
           onClick={handleToggle}
           startIcon={isRunning ? <StopIcon /> : <PlayArrowIcon />}
           color={isRunning ? 'error' : 'primary'}
-          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600, transition: 'all 0.15s ease', '&:hover': { transform: 'translateY(-1px)', boxShadow: 2 } }}
+          sx={{ minWidth: 100, borderRadius: 1.5, textTransform: 'none', fontWeight: 600, transition: 'background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease', '&:hover': { transform: 'translateY(-1px)', boxShadow: 2 } }}
         >
           {isRunning ? '停止' : '开始'}
         </Button>
@@ -140,7 +140,7 @@ export default function URLInputPanel({ onStartUrl, onStopUrl, getDownloadProgre
       )}
 
       {videoInfo && (
-        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minHeight: 32 }}>
           <Chip label={videoInfo.siteName} size="small" color="primary" variant="outlined" />
           <Typography variant="caption" noWrap sx={{ flex: 1 }}>
             {videoInfo.title}
@@ -164,7 +164,7 @@ export default function URLInputPanel({ onStartUrl, onStopUrl, getDownloadProgre
               >
                 {videoInfo.parts.map((part) => (
                   <MenuItem key={part.index} value={part.index}>
-                    P{part.index + 1}: {part.title.length > 30 ? part.title.slice(0, 30) + '...' : part.title}
+                    P{part.index + 1}: {part.title.length > 30 ? part.title.slice(0, 30) + '…' : part.title}
                     {' '}({formatDuration(part.duration)})
                   </MenuItem>
                 ))}

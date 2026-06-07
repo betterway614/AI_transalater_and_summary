@@ -116,7 +116,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
           cursor: 'default',
           WebkitAppRegion: 'drag',
           userSelect: 'none',
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
             bgcolor: `rgba(${bgBase}, ${opacity * 0.85})`,
             borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
@@ -143,7 +143,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
                   minWidth: 0
                 }}
               >
-                {lastEntry.originalText || '...'}
+                {lastEntry.originalText || '…'}
               </Typography>
               <Box sx={{ width: 1, height: 10, bgcolor: colDivider, flexShrink: 0 }} />
               <Typography
@@ -158,7 +158,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
                   minWidth: 0
                 }}
               >
-                {lastEntry.translatedText || '...'}
+                {lastEntry.translatedText || '…'}
               </Typography>
             </Box>
           ) : (
@@ -173,7 +173,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
                 textOverflow: 'ellipsis'
               }}
             >
-              {lastEntry.translatedText || lastEntry.originalText || '...'}
+              {lastEntry.translatedText || lastEntry.originalText || '…'}
             </Typography>
           )
         ) : (
@@ -227,7 +227,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
         boxShadow: isDark
           ? '0 12px 40px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3)'
           : '0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06)',
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         position: 'relative'
       }}
     >
@@ -287,6 +287,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
             max={1}
             step={0.05}
             size="small"
+            aria-label="调整透明度"
             sx={{
               width: 48,
               color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)',
@@ -347,7 +348,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 0.75 }}>
             <OpenWithIcon sx={{ fontSize: 20, color: mutedColor, opacity: 0.4 }} />
             <Typography variant="body2" sx={{ color: mutedColor, fontSize: 11 }}>
-              等待翻译...
+              等待翻译…
             </Typography>
           </Box>
         ) : isBilingual ? (
@@ -391,7 +392,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
                   overflowWrap: 'break-word'
                 }}
               >
-                {entry.translatedText || '...'}
+                {entry.translatedText || '…'}
               </Typography>
             </Box>
           ))
@@ -409,7 +410,7 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
                   overflowWrap: 'break-word'
                 }}
               >
-                {entry.translatedText || '...'}
+                {entry.translatedText || '…'}
               </Typography>
             </Box>
           ))

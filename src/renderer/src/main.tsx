@@ -24,17 +24,17 @@ const sharedComponents = {
   },
   MuiIconButton: {
     styleOverrides: {
-      root: { transition: 'all 0.15s ease' }
+      root: { transition: 'background-color 0.15s ease, color 0.15s ease, transform 0.15s ease' }
     }
   },
   MuiButton: {
     styleOverrides: {
-      root: { transition: 'all 0.15s ease' }
+      root: { transition: 'background-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease' }
     }
   },
   MuiChip: {
     styleOverrides: {
-      root: { transition: 'all 0.15s ease' }
+      root: { transition: 'background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease' }
     }
   },
   MuiTab: {
@@ -74,7 +74,11 @@ const darkTheme = createTheme({
           '--sidebar-bg': '#0f1225',
           '--titlebar-bg': '#0f1225',
           '--hover-glow': 'rgba(66, 165, 245, 0.08)',
-          '--active-glow': 'rgba(66, 165, 245, 0.15)'
+          '--active-glow': 'rgba(66, 165, 245, 0.15)',
+          '--z-sidebar': '10',
+          '--z-floating': '100',
+          '--z-dialog': '200',
+          '--z-tooltip': '300'
         }
       }
     }
@@ -90,7 +94,10 @@ const lightTheme = createTheme({
       default: '#f0f2f5',
       paper: '#ffffff'
     },
-    divider: 'rgba(0, 0, 0, 0.08)'
+    divider: 'rgba(0, 0, 0, 0.08)',
+    text: {
+      disabled: 'rgba(0, 0, 0, 0.55)'  // ensure 4.5:1 contrast on #f0f2f5
+    }
   },
   typography: sharedTypography,
   components: {
@@ -102,7 +109,11 @@ const lightTheme = createTheme({
           '--sidebar-bg': '#f8f9fb',
           '--titlebar-bg': '#f8f9fb',
           '--hover-glow': 'rgba(25, 118, 210, 0.06)',
-          '--active-glow': 'rgba(25, 118, 210, 0.12)'
+          '--active-glow': 'rgba(25, 118, 210, 0.12)',
+          '--z-sidebar': '10',
+          '--z-floating': '100',
+          '--z-dialog': '200',
+          '--z-tooltip': '300'
         }
       }
     }

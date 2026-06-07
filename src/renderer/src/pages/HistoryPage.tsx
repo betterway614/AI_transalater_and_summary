@@ -132,7 +132,7 @@ export default function HistoryPage() {
             {sessions.length === 0 ? '暂无翻译记录' : '没有匹配的记录'}
           </Typography>
           <Typography variant="body2" color="text.disabled" sx={{ mt: 1 }}>
-            {sessions.length === 0 ? '开始翻译后，记录将自动保存在此处' : '尝试调整搜索条件'}
+            {sessions.length === 0 ? '返回首页开始翻译，记录将自动保存在此处' : '尝试调整搜索条件'}
           </Typography>
         </Box>
       ) : (
@@ -148,7 +148,7 @@ export default function HistoryPage() {
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 2,
-                transition: 'all 0.2s ease',
+                transition: 'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease',
                 cursor: 'pointer',
                 '&:hover': {
                   borderColor: 'primary.main',
@@ -172,7 +172,7 @@ export default function HistoryPage() {
                       <Chip
                         label={
                           sessionGeneratingId === session.id
-                            ? '生成中...'
+                            ? '生成中…'
                             : '生成总结'
                         }
                         size="small"
@@ -195,7 +195,7 @@ export default function HistoryPage() {
                     <IconButton
                       size="small"
                       onClick={() => handleCopySession(session)}
-                      sx={{ transition: 'all 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)' } }}
+                      sx={{ transition: 'background-color 0.15s ease, color 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)' } }}
                     >
                       <ContentCopyIcon fontSize="small" />
                     </IconButton>
@@ -204,7 +204,7 @@ export default function HistoryPage() {
                     <IconButton
                       size="small"
                       onClick={() => setDeleteTarget(session.id)}
-                      sx={{ transition: 'all 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)' } }}
+                      sx={{ transition: 'background-color 0.15s ease, color 0.15s ease', '&:hover': { bgcolor: 'var(--hover-glow)' } }}
                     >
                       <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
@@ -308,7 +308,7 @@ function SessionSummaryPreview({ summary }: { summary: string }) {
           bgcolor: 'rgba(156, 39, 176, 0.06)',
           border: '1px solid',
           borderColor: 'rgba(156, 39, 176, 0.12)',
-          transition: 'all 0.15s ease',
+          transition: 'background-color 0.15s ease, color 0.15s ease',
           '&:hover': { bgcolor: 'rgba(156, 39, 176, 0.12)' }
         }}
       >
@@ -462,7 +462,7 @@ function SessionDetailDialog({
               disabled={isGenerating}
               onClick={(e) => onGenerateSummary(session, e as any)}
             >
-              {isGenerating && generatingSessionId === session.id ? '生成中...' : '生成总结'}
+              {isGenerating && generatingSessionId === session.id ? '生成中…' : '生成总结'}
             </Button>
           </Box>
         )}
