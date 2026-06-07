@@ -88,8 +88,10 @@ export function useURLAudio() {
       console.log(`[useURLAudio] VAD split into ${chunks.length} chunks`)
       setStatus('listening')
 
-      // Step 3: Process each chunk sequentially — fire-and-forget translation per sentence
+      // Step 3: Pipeline ASR and translation — start next chunk's ASR while translating current
       const whisper = getWhisper()
+      let pendingTranslations: Promise<void>[] = []
+
       for (let i = 0; i < chunks.length; i++) {
         if (cancelledRef.current) break
 
@@ -106,24 +108,21 @@ export function useURLAudio() {
 
           console.log(`[useURLAudio] Chunk ${i + 1} transcribed: "${text.substring(0, 80)}..."`)
 
-          // Split into sentences and create one entry per sentence for granular translation
           const sentences = splitSentences(text)
-          const translationPromises: Promise<void>[] = []
-
           for (const sentence of sentences) {
             const entry = createEntry(sentence, mode)
             addEntry(entry)
-            translationPromises.push(translateEntry(entry))
+            pendingTranslations.push(translateEntry(entry))
           }
-
-          // Wait for all sentence translations in this chunk before next ASR call
-          await Promise.all(translationPromises)
         } catch (err) {
           console.error(`[useURLAudio] Chunk ${i + 1} error:`, err)
         }
 
         setStatus('listening')
       }
+
+      // Wait for all remaining translations to finish
+      await Promise.all(pendingTranslations)
 
       if (!cancelledRef.current) {
         setStatus('idle')

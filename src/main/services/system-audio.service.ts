@@ -15,20 +15,20 @@ export class SystemAudioService {
   private process: ChildProcess | null = null
   private isCapturing = false
 
-  start(onData: (data: Buffer) => void): void {
+  start(onData: (data: Buffer) => void, onError?: (error: string) => void): void {
     if (this.isCapturing) return
 
     // Strategy 1: Try sox with WASAPI loopback
     const soxPath = resolveBinary(getPlatformBinary('sox'))
     if (soxPath) {
-      this.startWithSox(soxPath, onData)
+      this.startWithSox(soxPath, onData, onError)
       return
     }
 
     // Strategy 2: Try ffmpeg with WASAPI
     const ffmpegPath = resolveBinary(getPlatformBinary('ffmpeg'))
     if (ffmpegPath) {
-      this.startWithFfmpeg(ffmpegPath, onData)
+      this.startWithFfmpeg(ffmpegPath, onData, onError)
       return
     }
 
@@ -40,7 +40,7 @@ export class SystemAudioService {
     )
   }
 
-  private startWithSox(soxPath: string, onData: (data: Buffer) => void): void {
+  private startWithSox(soxPath: string, onData: (data: Buffer) => void, onError?: (error: string) => void): void {
     log.info('[SystemAudio] Starting with sox WASAPI loopback')
 
     this.process = spawn(soxPath, [
@@ -53,11 +53,11 @@ export class SystemAudioService {
       '-'                          // Output to stdout
     ])
 
-    this.setupProcessHandlers(this.process, onData)
+    this.setupProcessHandlers(this.process, onData, onError)
     this.isCapturing = true
   }
 
-  private startWithFfmpeg(ffmpegPath: string, onData: (data: Buffer) => void): void {
+  private startWithFfmpeg(ffmpegPath: string, onData: (data: Buffer) => void, onError?: (error: string) => void): void {
     log.info('[SystemAudio] Starting with ffmpeg WASAPI')
 
     this.process = spawn(ffmpegPath, [
@@ -70,11 +70,11 @@ export class SystemAudioService {
       'pipe:1'                     // Output to stdout
     ], { stdio: ['pipe', 'pipe', 'pipe'] })
 
-    this.setupProcessHandlers(this.process, onData)
+    this.setupProcessHandlers(this.process, onData, onError)
     this.isCapturing = true
   }
 
-  private setupProcessHandlers(proc: ChildProcess, onData: (data: Buffer) => void): void {
+  private setupProcessHandlers(proc: ChildProcess, onData: (data: Buffer) => void, onError?: (error: string) => void): void {
     let buffer = Buffer.alloc(0)
     const SAMPLE_RATE = 16000
     const BYTES_PER_SAMPLE = 2 // 16-bit
@@ -100,12 +100,16 @@ export class SystemAudioService {
       this.isCapturing = false
       this.process = null
       log.info(`[SystemAudio] Process exited with code ${code}`)
+      if (code !== 0 && code !== null) {
+        onError?.(`系统音频采集进程异常退出 (code: ${code})`)
+      }
     })
 
     proc.on('error', (err) => {
       this.isCapturing = false
       this.process = null
       log.error('[SystemAudio] Process error:', err.message)
+      onError?.(`系统音频采集错误: ${err.message}`)
     })
   }
 

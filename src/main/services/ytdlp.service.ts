@@ -22,6 +22,7 @@ export class YtdlpService {
   private ytdlpPath: string
   private ffmpegPath: string | null
   private cookiesPath: string | null = null
+  private isBusy = false
 
   constructor() {
     this.ytdlpPath = resolveBinary(getPlatformBinary('yt-dlp')) ?? getPlatformBinary('yt-dlp')
@@ -96,6 +97,11 @@ export class YtdlpService {
     options: ExtractOptions,
     onProgress: (progress: number) => void
   ): Promise<Buffer> {
+    if (this.isBusy) {
+      throw new Error('已有下载任务正在进行中，请等待完成后再试')
+    }
+    this.isBusy = true
+
     const { url, partIndex, cookiesPath } = options
     const timestamp = Date.now()
     const rawFile = join(tmpdir(), `ytdlp-raw-${timestamp}`)
@@ -137,6 +143,7 @@ export class YtdlpService {
 
       this.process.on('close', async (code) => {
         this.process = null
+        this.isBusy = false
         if (code !== 0) {
           await this.cleanup(rawFile, wavFile)
           reject(new Error(this.parseError(stderr, code)))
@@ -170,6 +177,7 @@ export class YtdlpService {
 
       this.process.on('error', (err) => {
         this.process = null
+        this.isBusy = false
         reject(new Error(
           `Failed to run yt-dlp: ${err.message}\n` +
           'Please install yt-dlp or run: npx tsx scripts/download-ytdlp.ts'
@@ -255,5 +263,6 @@ export class YtdlpService {
       this.process.kill()
       this.process = null
     }
+    this.isBusy = false
   }
 }

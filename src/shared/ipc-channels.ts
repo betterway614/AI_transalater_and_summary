@@ -18,6 +18,7 @@ export const IPC_CHANNELS = {
   SYSTEM_AUDIO_START: 'system-audio:start',
   SYSTEM_AUDIO_STOP: 'system-audio:stop',
   SYSTEM_AUDIO_DATA: 'system-audio:data',
+  SYSTEM_AUDIO_ERROR: 'system-audio:error',
   SYSTEM_AUDIO_DEVICES: 'system-audio:devices',
   SYSTEM_AUDIO_GET_SCREEN_SOURCE: 'system-audio:get-screen-source',
 
@@ -37,6 +38,7 @@ export const IPC_CHANNELS = {
   // 浮动字幕窗口
   FLOATING_SHOW: 'floating:show',
   FLOATING_HIDE: 'floating:hide',
+  FLOATING_SET_EXPANDED: 'floating:set-expanded',
   FLOATING_UPDATE_SUBTITLES: 'floating:update-subtitles',
   FLOATING_UPDATE_THEME: 'floating:update-theme',
   FLOATING_UPDATE_SUMMARY: 'floating:update-summary',
@@ -45,6 +47,8 @@ export const IPC_CHANNELS = {
   FLOATING_SUMMARY_FROM_RENDERER: 'floating:summary-from-renderer',
   FLOATING_SUBTITLE_SETTINGS_FROM_RENDERER: 'floating:subtitle-settings-from-renderer',
   FLOATING_UPDATE_SUBTITLE_SETTINGS: 'floating:update-subtitle-settings',
+  FLOATING_SET_DISPLAY_MODE: 'floating:set-display-mode',
+  FLOATING_DISPLAY_MODE_CHANGED: 'floating:display-mode-changed',
 
   // AI API 代理（主进程中转，避免 CORS）
   AI_WHISPER_TRANSCRIBE: 'ai:whisper-transcribe',

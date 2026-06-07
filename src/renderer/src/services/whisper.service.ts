@@ -1,22 +1,10 @@
+import { retryWithBackoff } from '@shared/retry'
+
 export interface WhisperConfig {
   apiKey: string
   model?: string
   baseUrl?: string
   language?: string
-}
-
-async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn()
-    } catch (err) {
-      if (attempt === maxRetries) throw err
-      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
-      console.warn(`[Whisper] Attempt ${attempt + 1} failed, retrying in ${delay}ms:`, err)
-      await new Promise(r => setTimeout(r, delay))
-    }
-  }
-  throw new Error('Unreachable')
 }
 
 export class WhisperService {
@@ -45,6 +33,6 @@ export class WhisperService {
       })
       console.log(`[Whisper] Response: "${result.text.substring(0, 100)}"`)
       return result.text
-    })
+    }, { label: 'Whisper' })
   }
 }

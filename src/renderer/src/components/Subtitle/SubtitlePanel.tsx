@@ -53,7 +53,13 @@ export default function SubtitlePanel() {
         </Typography>
       </Box>
 
-      <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <Box
+        ref={scrollRef}
+        sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}
+        role="log"
+        aria-live="polite"
+        aria-label="实时字幕"
+      >
         {displayEntries.length === 0 ? (
           <Box
             sx={{

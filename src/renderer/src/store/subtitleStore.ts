@@ -12,15 +12,28 @@ interface SubtitleState {
 }
 
 let idCounter = 0
+let orderCounter = 0
 
 function generateId(): string {
   return `sub_${Date.now()}_${++idCounter}`
 }
 
+function nextOrder(): number {
+  return ++orderCounter
+}
+
 export const useSubtitleStore = create<SubtitleState>((set) => ({
   entries: [],
 
-  addEntry: (entry) => set((state) => ({ entries: [...state.entries, entry] })),
+  addEntry: (entry) =>
+    set((state) => {
+      // Insert at correct position by order, maintaining sort
+      const pos = state.entries.findIndex((e) => (e as any)._order > (entry as any)._order)
+      const entries = pos === -1
+        ? [...state.entries, entry]
+        : [...state.entries.slice(0, pos), entry, ...state.entries.slice(pos)]
+      return { entries }
+    }),
 
   updateEntry: (id, text) =>
     set((state) => ({
@@ -46,6 +59,7 @@ export const useSubtitleStore = create<SubtitleState>((set) => ({
     })),
 
   clearEntries: () => {
+    orderCounter = 0
     set({ entries: [] })
   },
 
@@ -55,6 +69,7 @@ export const useSubtitleStore = create<SubtitleState>((set) => ({
     originalText,
     translatedText: '',
     isFinal: false,
-    mode
-  })
+    mode,
+    _order: nextOrder()
+  } as SubtitleEntry & { _order: number })
 }))

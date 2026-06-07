@@ -1,5 +1,5 @@
 import { Box } from '@mui/material'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import ModeTabs from '../components/ModeSelector/ModeTabs'
 import URLInputPanel from '../components/URLInput/URLInputPanel'
 import DeviceSelector from '../components/DeviceSelector/DeviceSelector'
@@ -24,11 +24,18 @@ export default function HomePage() {
   const stopTranslation = useAppStore((s) => s.stopTranslation)
   const { processAudioChunk } = useSubtitle()
 
-  // Sync subtitles to floating window via IPC
+  // Sync subtitles to floating window via IPC — debounced to avoid flooding
   const entries = useSubtitleStore((s) => s.entries)
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    if (entries.length > 0) {
-      window.api?.floating.updateSubtitles(entries)
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
+    syncTimerRef.current = setTimeout(() => {
+      if (entries.length > 0) {
+        window.api?.floating.updateSubtitles(entries)
+      }
+    }, 150)
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
     }
   }, [entries])
 
@@ -67,12 +74,14 @@ export default function HomePage() {
     [processAudioChunk, mode]
   )
   const { start: startMicCapture, stop: stopMicCapture, audioLevelRef } = useAudioCapture({
-    onAudioChunk: handleAudioChunk
+    onAudioChunk: handleAudioChunk,
+    label: 'MicCapture'
   })
 
   // System audio capture (via Electron desktopCapturer)
   const { start: startSystemAudio, stop: stopSystemAudio, audioLevelRef: sysAudioLevelRef } = useSystemAudioCapture({
-    onAudioChunk: handleAudioChunk
+    onAudioChunk: handleAudioChunk,
+    label: 'SysAudio'
   })
 
   const activeAudioLevel = mode === 'system-audio' ? sysAudioLevelRef : audioLevelRef

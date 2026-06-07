@@ -273,10 +273,10 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
           <IconButton
             size="small"
             onClick={handleClose}
-            aria-label="关闭"
+            aria-label="关闭浮动字幕"
             sx={{
-              width: 20,
-              height: 20,
+              width: 24,
+              height: 24,
               color: mutedColor,
               '&:hover': { color: '#ef4444', bgcolor: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)' }
             }}

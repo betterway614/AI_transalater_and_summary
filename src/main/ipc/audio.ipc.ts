@@ -11,9 +11,14 @@ function getSystemAudio(): SystemAudioService {
 export function registerAudioIpc(): void {
   ipcMain.handle(IPC_CHANNELS.SYSTEM_AUDIO_START, async (event) => {
     try {
-      getSystemAudio().start((data: Buffer) => {
-        event.sender.send(IPC_CHANNELS.SYSTEM_AUDIO_DATA, data.buffer)
-      })
+      getSystemAudio().start(
+        (data: Buffer) => {
+          event.sender.send(IPC_CHANNELS.SYSTEM_AUDIO_DATA, data.buffer)
+        },
+        (error: string) => {
+          event.sender.send(IPC_CHANNELS.SYSTEM_AUDIO_ERROR, error)
+        }
+      )
       return { success: true }
     } catch (err: any) {
       return { success: false, error: err.message }

@@ -4,22 +4,29 @@ import log from 'electron-log'
 
 let mainWindow: BrowserWindow | null = null
 
+const ALLOWED_PERMISSIONS = new Set(['media', 'display-capture'])
+
 export function createMainWindow(): BrowserWindow {
   const isDev = !app.isPackaged
   const iconPath = join(__dirname, '../../resources/icon.png')
 
-  // Auto-grant ALL Chromium permission requests (mic, display-capture, etc.)
-  session.defaultSession.setPermissionRequestHandler((_wc, _perm, callback) => {
-    callback(true)
+  // Only auto-grant media & display-capture permissions
+  session.defaultSession.setPermissionRequestHandler((_wc, perm, callback) => {
+    const allowed = ALLOWED_PERMISSIONS.has(perm)
+    if (!allowed) {
+      log.warn(`[Window] Permission denied: ${perm}`)
+    }
+    callback(allowed)
   })
 
-  // Auto-grant ALL Chromium permission checks
-  session.defaultSession.setPermissionCheckHandler((_wc, _perm, _origin) => {
-    return true
+  session.defaultSession.setPermissionCheckHandler((_wc, perm, _origin) => {
+    return ALLOWED_PERMISSIONS.has(perm)
   })
 
-  // Handle getDisplayMedia() auto-approval
-  // Electron 33+ requires DesktopCapturerSource object for video
+  // Handle getDisplayMedia() — explicitly approve so system audio loopback works
+  // NOTE: useSystemPicker: false means no native picker dialog appears.
+  // This is required for system audio capture to function without user interaction,
+  // but means the renderer must be trusted (contextIsolation + no nodeIntegration).
   session.defaultSession.setDisplayMediaRequestHandler(
     async (_request, callback) => {
       try {
@@ -30,7 +37,7 @@ export function createMainWindow(): BrowserWindow {
           callback({ video: undefined as any })
           return
         }
-        log.info('[Window] getDisplayMedia auto-approved, source:', primaryScreen.id)
+        log.info('[Window] getDisplayMedia approved, source:', primaryScreen.id)
         callback({ video: primaryScreen, audio: 'loopback' })
       } catch (err) {
         log.error('[Window] getDisplayMedia handler error:', err)
@@ -71,7 +78,17 @@ export function createMainWindow(): BrowserWindow {
   }, 3000)
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    const url = details.url
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        shell.openExternal(url)
+      } else {
+        log.warn(`[Window] Blocked external URL with protocol: ${parsed.protocol}`)
+      }
+    } catch {
+      log.warn(`[Window] Blocked invalid external URL: ${url}`)
+    }
     return { action: 'deny' }
   })
 

@@ -15,6 +15,8 @@ interface ElectronAPI {
     onThemeUpdate: (callback: (theme: string) => void) => () => void
     updateSummary: (summary: string | null) => Promise<boolean>
     onSummaryUpdate: (callback: (summary: string | null) => void) => () => void
+    updateSubtitleSettings: (settings: import('../shared/types').SubtitleSettings) => Promise<boolean>
+    onSubtitleSettingsUpdate: (callback: (settings: import('../shared/types').SubtitleSettings) => void) => () => void
   }
   store: {
     get: (key: string) => Promise<unknown>
@@ -33,6 +35,7 @@ interface ElectronAPI {
     getDevices: () => Promise<string[]>
     getScreenSource: () => Promise<string | null>
     onData: (callback: (data: ArrayBuffer) => void) => () => void
+    onError: (callback: (error: string) => void) => () => void
   }
   exportMarkdown: (content: string, defaultName?: string) => Promise<string | null>
   auth: {

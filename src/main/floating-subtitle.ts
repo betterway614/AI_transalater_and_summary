@@ -1,12 +1,14 @@
 import { BrowserWindow, ipcMain, screen } from 'electron'
 import { join } from 'path'
 import { IPC_CHANNELS } from '../shared/ipc-channels'
+import { getMainWindow } from './window'
+import type { SubtitleEntry, SubtitleSettings } from '../shared/types'
 
 let floatingWindow: BrowserWindow | null = null
-let subtitleCache: any[] = []
+let subtitleCache: SubtitleEntry[] = []
 let themeCache: string = 'dark'
 let summaryCache: string | null = null
-let subtitleSettingsCache: any = null
+let subtitleSettingsCache: SubtitleSettings | null = null
 
 const COMPACT_H = 36
 const EXPANDED_H = 240
@@ -92,7 +94,7 @@ export function isFloatingVisible(): boolean {
   return floatingWindow !== null && !floatingWindow.isDestroyed() && floatingWindow.isVisible()
 }
 
-export function sendSubtitlesToFloat(entries: any[]): void {
+export function sendSubtitlesToFloat(entries: SubtitleEntry[]): void {
   subtitleCache = entries
   if (floatingWindow && !floatingWindow.isDestroyed()) {
     floatingWindow.webContents.send(IPC_CHANNELS.FLOATING_UPDATE_SUBTITLES, entries)
@@ -113,7 +115,7 @@ export function sendSummaryToFloat(summary: string | null): void {
   }
 }
 
-export function sendSubtitleSettingsToFloat(settings: any): void {
+export function sendSubtitleSettingsToFloat(settings: SubtitleSettings): void {
   subtitleSettingsCache = settings
   if (floatingWindow && !floatingWindow.isDestroyed()) {
     floatingWindow.webContents.send(IPC_CHANNELS.FLOATING_UPDATE_SUBTITLE_SETTINGS, settings)
@@ -131,7 +133,7 @@ export function registerFloatingIpc(): void {
     return true
   })
 
-  ipcMain.handle(IPC_CHANNELS.FLOATING_SUBTITLES_FROM_RENDERER, (_event, entries: any[]) => {
+  ipcMain.handle(IPC_CHANNELS.FLOATING_SUBTITLES_FROM_RENDERER, (_event, entries: SubtitleEntry[]) => {
     sendSubtitlesToFloat(entries)
     return true
   })
@@ -146,13 +148,13 @@ export function registerFloatingIpc(): void {
     return true
   })
 
-  ipcMain.handle(IPC_CHANNELS.FLOATING_SUBTITLE_SETTINGS_FROM_RENDERER, (_event, settings: any) => {
+  ipcMain.handle(IPC_CHANNELS.FLOATING_SUBTITLE_SETTINGS_FROM_RENDERER, (_event, settings: SubtitleSettings) => {
     sendSubtitleSettingsToFloat(settings)
     return true
   })
 
   // Resize floating window between compact / expanded
-  ipcMain.on('floating:set-expanded', (_event, expanded: boolean) => {
+  ipcMain.on(IPC_CHANNELS.FLOATING_SET_EXPANDED, (_event, expanded: boolean) => {
     if (!floatingWindow || floatingWindow.isDestroyed()) return
     const display = screen.getPrimaryDisplay()
     const { width: screenW, height: screenH } = display.workAreaSize
@@ -163,6 +165,14 @@ export function registerFloatingIpc(): void {
       y: screenH - targetH - 48,
       width: bounds.width,
       height: targetH
-    }, true) // true = animated
+    }, true)
+  })
+
+  // Forward display mode change from floating window to main window
+  ipcMain.on(IPC_CHANNELS.FLOATING_SET_DISPLAY_MODE, (_event, mode: string) => {
+    const mainWin = getMainWindow()
+    if (mainWin && !mainWin.isDestroyed()) {
+      mainWin.webContents.send(IPC_CHANNELS.FLOATING_DISPLAY_MODE_CHANGED, mode)
+    }
   })
 }

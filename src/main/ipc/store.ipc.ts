@@ -3,7 +3,10 @@ import Store from 'electron-store'
 import { IPC_CHANNELS } from '../../shared/ipc-channels'
 import log from 'electron-log'
 
-const store = new Store()
+// Use encryption for sensitive data (API keys are stored here)
+const store = new Store({
+  encryptionKey: 'voicebridge-store-v1'
+})
 
 export function registerStoreIpc(): void {
   ipcMain.handle(IPC_CHANNELS.STORE_GET, (_event, key: string) => {

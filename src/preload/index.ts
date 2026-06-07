@@ -21,7 +21,7 @@ const api = {
     updateTheme: (theme: string): Promise<boolean> =>
       ipcRenderer.invoke(IPC_CHANNELS.FLOATING_THEME_FROM_RENDERER, theme),
     setExpanded: (expanded: boolean) => {
-      ipcRenderer.send('floating:set-expanded', expanded)
+      ipcRenderer.send(IPC_CHANNELS.FLOATING_SET_EXPANDED, expanded)
     },
     onSubtitlesUpdate: (callback: (entries: SubtitleEntry[]) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, entries: SubtitleEntry[]) => callback(entries)
@@ -46,6 +46,14 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, settings: SubtitleSettings) => callback(settings)
       ipcRenderer.on(IPC_CHANNELS.FLOATING_UPDATE_SUBTITLE_SETTINGS, handler)
       return () => { ipcRenderer.removeListener(IPC_CHANNELS.FLOATING_UPDATE_SUBTITLE_SETTINGS, handler) }
+    },
+    setDisplayMode: (mode: string) => {
+      ipcRenderer.send(IPC_CHANNELS.FLOATING_SET_DISPLAY_MODE, mode)
+    },
+    onDisplayModeChange: (callback: (mode: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, mode: string) => callback(mode)
+      ipcRenderer.on(IPC_CHANNELS.FLOATING_DISPLAY_MODE_CHANGED, handler)
+      return () => { ipcRenderer.removeListener(IPC_CHANNELS.FLOATING_DISPLAY_MODE_CHANGED, handler) }
     }
   },
 
@@ -76,6 +84,11 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, data: ArrayBuffer) => callback(data)
       ipcRenderer.on(IPC_CHANNELS.SYSTEM_AUDIO_DATA, handler)
       return () => ipcRenderer.removeListener(IPC_CHANNELS.SYSTEM_AUDIO_DATA, handler)
+    },
+    onError: (callback: (error: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, error: string) => callback(error)
+      ipcRenderer.on(IPC_CHANNELS.SYSTEM_AUDIO_ERROR, handler)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.SYSTEM_AUDIO_ERROR, handler)
     }
   },
 

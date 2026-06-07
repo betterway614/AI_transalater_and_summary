@@ -1,3 +1,5 @@
+import { retryWithBackoff } from '@shared/retry'
+
 export interface DeepSeekConfig {
   apiKey: string
   model?: string
@@ -16,20 +18,6 @@ Rules:
 - If the text is already in Chinese, output it as-is
 - Keep technical terms accurate
 - Be concise and natural in Chinese`
-
-async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn()
-    } catch (err) {
-      if (attempt === maxRetries) throw err
-      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
-      console.warn(`[DeepSeek] Attempt ${attempt + 1} failed, retrying in ${delay}ms:`, err)
-      await new Promise(r => setTimeout(r, delay))
-    }
-  }
-  throw new Error('Unreachable')
-}
 
 export class DeepSeekService {
   private apiKey: string
@@ -57,7 +45,7 @@ export class DeepSeekService {
         temperature: 0.3,
         maxTokens: 1024
       })
-    })
+    }, { label: 'DeepSeek' })
     yield { text: result.text, isDone: true }
   }
 
