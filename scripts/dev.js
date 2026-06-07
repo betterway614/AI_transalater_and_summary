@@ -1,4 +1,6 @@
 #!/usr/bin/env node
-delete process.env.ELECTRON_RUN_AS_NODE
 const { execSync } = require('child_process')
-execSync('npx electron-vite dev', { stdio: 'inherit', env: process.env })
+// Strip ELECTRON_RUN_AS_NODE to prevent Electron from running in Node.js mode
+const env = { ...process.env }
+delete env.ELECTRON_RUN_AS_NODE
+execSync('npx electron-vite dev', { stdio: 'inherit', env })
