@@ -279,6 +279,63 @@ npm run test:watch       # 监听模式
 - 支持创建自定义模板，定义 System Prompt 和用户消息模板
 - 翻译过程中可即时切换模板，无需中断
 
+## 依赖与开源项目
+
+本项目基于以下优秀的开源项目构建：
+
+### 核心框架
+
+| 项目 | 用途 | 许可证 |
+|------|------|--------|
+| [Electron](https://www.electronjs.org/) | 跨平台桌面应用框架 | MIT |
+| [electron-vite](https://electron-vite.org/) | Electron + Vite 构建工具链 | MIT |
+| [React](https://react.dev/) | UI 渲染引擎 | MIT |
+| [TypeScript](https://www.typescriptlang.org/) | 类型安全 | Apache-2.0 |
+
+### UI 与样式
+
+| 项目 | 用途 | 许可证 |
+|------|------|--------|
+| [MUI](https://mui.com/) | Material Design 组件库 | MIT |
+| [Tailwind CSS](https://tailwindcss.com/) | 原子化 CSS 框架 | MIT |
+| [Emotion](https://emotion.sh/) | CSS-in-JS 方案 | MIT |
+
+### 状态与路由
+
+| 项目 | 用途 | 许可证 |
+|------|------|--------|
+| [Zustand](https://zustand.docs.pmnd.rs/) | 轻量级状态管理 | MIT |
+| [React Router](https://reactrouter.com/) | 声明式路由 | MIT |
+
+### AI 与音视频
+
+| 项目 | 用途 | 许可证 |
+|------|------|--------|
+| [OpenAI Whisper](https://openai.com/whisper) | 语音识别 API | MIT（模型权重）/ 商用 API |
+| [DeepSeek](https://www.deepseek.com/) | 翻译与摘要大模型 | 商用 API |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | 视频音频提取 | Unlicense |
+
+### 数据存储
+
+| 项目 | 用途 | 许可证 |
+|------|------|--------|
+| [electron-store](https://github.com/sindresorhus/electron-store) | 持久化存储 | MIT |
+
+### 思维导图
+
+| 项目 | 用途 | 许可证 |
+|------|------|--------|
+| [markmap](https://markmap.js.org/) | Markdown 转交互式思维导图 | MIT |
+
+### 构建与测试
+
+| 项目 | 用途 | 许可证 |
+|------|------|--------|
+| [Vite](https://vitejs.dev/) | 前端构建工具 | MIT |
+| [electron-builder](https://www.electron.build/) | 应用打包分发 | MIT |
+| [Vitest](https://vitest.dev/) | 单元测试框架 | MIT |
+| [Testing Library](https://testing-library.com/) | UI 测试工具 | MIT |
+
 ## 许可证
 
 MIT
