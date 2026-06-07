@@ -27,18 +27,32 @@ export default function HomePage() {
   const { processAudioChunk } = useSubtitle()
   const updateSubtitle = useSettingsStore((s) => s.updateSubtitle)
 
-  // Sync subtitles to floating window via IPC — debounced to avoid flooding
+  // Sync subtitles to floating window via IPC — throttled (at most every 150ms) with trailing edge
+  // Throttle ensures updates are sent regularly during active translation, unlike debounce which
+  // would wait indefinitely for changes to stop, preventing the floating window from updating.
   const entries = useSubtitleStore((s) => s.entries)
-  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSyncRef = useRef(0)
+  const trailerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
-    if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
-    syncTimerRef.current = setTimeout(() => {
-      if (entries.length > 0) {
-        window.api?.floating.updateSubtitles(entries)
-      }
-    }, 150)
+    const now = Date.now()
+    const elapsed = now - lastSyncRef.current
+
+    if (trailerRef.current) clearTimeout(trailerRef.current)
+
+    if (elapsed >= 150) {
+      // Leading edge — sync immediately
+      window.api?.floating.updateSubtitles(entries)
+      lastSyncRef.current = now
+    } else {
+      // Trailing edge — schedule sync for remainder of throttle window
+      trailerRef.current = setTimeout(() => {
+        window.api?.floating.updateSubtitles(useSubtitleStore.getState().entries)
+        lastSyncRef.current = Date.now()
+      }, 150 - elapsed)
+    }
+
     return () => {
-      if (syncTimerRef.current) clearTimeout(syncTimerRef.current)
+      if (trailerRef.current) clearTimeout(trailerRef.current)
     }
   }, [entries])
 
@@ -59,6 +73,19 @@ export default function HomePage() {
   useEffect(() => {
     window.api?.floating.updateSubtitleSettings(subtitleSettings)
   }, [subtitleSettings])
+
+  const showFloating = useAppStore((s) => s.showFloating)
+  useEffect(() => {
+    if (showFloating) {
+      // Immediately push all current data to the floating window when it appears.
+      // This primes the cache in the main process so that the ready-to-show
+      // handler can forward everything to the rendered window.
+      window.api?.floating.updateSubtitles(useSubtitleStore.getState().entries)
+      window.api?.floating.updateTheme(useSettingsStore.getState().settings.general.theme)
+      window.api?.floating.updateSubtitleSettings(useSettingsStore.getState().settings.subtitle)
+      window.api?.floating.updateSummary(useSummaryStore.getState().summary)
+    }
+  }, [showFloating])
 
   // Listen for display mode changes from floating window toggle
   useEffect(() => {
