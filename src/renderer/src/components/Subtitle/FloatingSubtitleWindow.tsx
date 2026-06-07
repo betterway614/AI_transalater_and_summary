@@ -1,8 +1,10 @@
-import { Box, Typography, IconButton, Slider } from '@mui/material'
+import { Box, Typography, IconButton, Slider, Tooltip } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import SubtitlesIcon from '@mui/icons-material/Subtitles'
 import OpenWithIcon from '@mui/icons-material/OpenWith'
+import ViewColumnIcon from '@mui/icons-material/ViewColumn'
+import ViewStreamIcon from '@mui/icons-material/ViewStream'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import type { SubtitleEntry, SubtitleDisplayMode } from '@shared/types'
 
@@ -86,6 +88,12 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
   const isBilingual = displayMode === 'bilingual'
 
   const handleClose = () => window.api?.floating.hide()
+
+  const handleToggleDisplayMode = () => {
+    const next = displayMode === 'bilingual' ? 'chinese-only' : 'bilingual'
+    setDisplayMode(next)
+    window.api?.floating.setDisplayMode(next)
+  }
 
   // ── Compact pill (no hover) ──────────────────────────
   if (!expanded) {
@@ -257,6 +265,21 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, WebkitAppRegion: 'no-drag' }}>
+          <Tooltip title={isBilingual ? '切换为仅中文' : '切换为双语两栏'} arrow>
+            <IconButton
+              size="small"
+              onClick={handleToggleDisplayMode}
+              aria-label={isBilingual ? '切换为仅中文' : '切换为双语两栏'}
+              sx={{
+                width: 24,
+                height: 24,
+                color: mutedColor,
+                '&:hover': { color: accentColor, bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              {isBilingual ? <ViewColumnIcon sx={{ fontSize: 14 }} /> : <ViewStreamIcon sx={{ fontSize: 14 }} />}
+            </IconButton>
+          </Tooltip>
           <Slider
             value={opacity}
             onChange={(_, v) => setOpacity(v as number)}
