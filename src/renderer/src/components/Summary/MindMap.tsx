@@ -75,13 +75,28 @@ function MindMapCanvas({
           return colors[depth % colors.length]
         },
         style: (id: string) => `
+          ${id} .markmap {
+            --markmap-text-color: ${isDark ? 'rgba(255,255,255,0.87)' : 'rgba(0,0,0,0.87)'};
+            --markmap-circle-open-bg: ${isDark ? '#3b3f5c' : '#fff'};
+            --markmap-code-bg: ${isDark ? '#1a1b26' : '#f0f0f0'};
+            --markmap-code-color: ${isDark ? '#ddd' : '#555'};
+          }
           ${id} .markmap-node text {
             font-family: 'Inter', -apple-system, sans-serif;
             font-size: 13px;
             fill: ${isDark ? 'rgba(255,255,255,0.87)' : 'rgba(0,0,0,0.87)'};
           }
+          ${id} .markmap-foreign {
+            color: ${isDark ? 'rgba(255,255,255,0.87)' : 'rgba(0,0,0,0.87)'};
+          }
+          ${id} .markmap-foreign a {
+            color: ${isDark ? '#60a5fa' : '#2563eb'};
+          }
           ${id} .markmap-link { stroke-width: 2; fill: none; }
           ${id} .markmap-node circle { stroke-width: 2; }
+          ${id} .markmap-highlight rect {
+            fill: ${isDark ? 'rgba(255,255,100,0.12)' : 'rgba(255,255,0,0.12)'};
+          }
         `
       }
 
@@ -239,15 +254,25 @@ function MindMapCanvas({
       }}
     >
       <Box
-        component="svg"
-        ref={svgRef}
+        className={isDark ? 'markmap-dark' : ''}
         sx={{
+          display: 'flex',
           width: '100%',
           height: '100%',
-          cursor: 'grab',
-          '&:active': { cursor: 'grabbing' }
+          bgcolor: isDark ? '#141829' : '#ffffff',
         }}
-      />
+      >
+        <Box
+          component="svg"
+          ref={svgRef}
+          sx={{
+            width: '100%',
+            height: '100%',
+            cursor: 'grab',
+            '&:active': { cursor: 'grabbing' }
+          }}
+        />
+      </Box>
 
       {toolbar && (
         <Box

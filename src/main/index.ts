@@ -5,6 +5,10 @@ import { registerAllIpc } from './ipc'
 import { createTray } from './tray'
 import { destroyFloatingWindow } from './floating-subtitle'
 import log from 'electron-log'
+import { configureConsoleEncoding } from './utils/log-encoding'
+
+// 在 Windows 上修复控制台编码，确保中文日志正常显示
+configureConsoleEncoding()
 
 app.whenReady().then(() => {
   const isDev = !app.isPackaged
