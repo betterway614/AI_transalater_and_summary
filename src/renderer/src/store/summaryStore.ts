@@ -3,13 +3,20 @@ import { useSubtitleStore } from './subtitleStore'
 import { useSettingsStore } from './settingsStore'
 import { useHistoryStore } from './historyStore'
 import { SummaryService } from '../services/summary.service'
+import type { SubtitleEntry } from '@shared/types'
+
+export interface GenerateSummaryOptions {
+  entries?: SubtitleEntry[]
+  sessionId?: string
+}
 
 interface SummaryState {
   summary: string | null
   isGenerating: boolean
+  sessionGeneratingId: string | null
   setSummary: (summary: string | null) => void
   setIsGenerating: (v: boolean) => void
-  generateSummary: () => Promise<void>
+  generateSummary: (opts?: GenerateSummaryOptions) => Promise<void>
   loadSummary: () => Promise<void>
   reset: () => void
 }
@@ -19,6 +26,7 @@ const STORAGE_KEY = 'summary'
 export const useSummaryStore = create<SummaryState>((set, get) => ({
   summary: null,
   isGenerating: false,
+  sessionGeneratingId: null,
 
   setSummary: (summary) => {
     set({ summary })
@@ -31,12 +39,12 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
 
   setIsGenerating: (isGenerating) => set({ isGenerating }),
 
-  generateSummary: async () => {
-    const entries = useSubtitleStore.getState().entries
+  generateSummary: async (opts?: GenerateSummaryOptions) => {
+    const entries = opts?.entries ?? useSubtitleStore.getState().entries
     const confirmedEntries = entries.filter((e) => e.isFinal)
     if (confirmedEntries.length === 0) return
 
-    set({ isGenerating: true })
+    set({ isGenerating: true, sessionGeneratingId: opts?.sessionId ?? null })
     try {
       const settings = useSettingsStore.getState().settings
       const { apiKey, baseUrl, model } = settings.ai.translator
@@ -57,12 +65,21 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
       for await (const chunk of service.streamingSummarize(fullText)) {
         result = chunk.text
       }
-      get().setSummary(result)
+
+      if (opts?.sessionId) {
+        // Generated from history — update that specific session
+        useHistoryStore.getState().updateSessionSummary(opts.sessionId, result)
+      } else {
+        // Generated from live session — use the existing flow
+        get().setSummary(result)
+      }
     } catch (err) {
       console.error('Summary generation error:', err)
-      set({ summary: '生成摘要时出错，请检查 API 配置' })
+      if (!opts?.sessionId) {
+        set({ summary: '生成摘要时出错，请检查 API 配置' })
+      }
     } finally {
-      set({ isGenerating: false })
+      set({ isGenerating: false, sessionGeneratingId: null })
     }
   },
 

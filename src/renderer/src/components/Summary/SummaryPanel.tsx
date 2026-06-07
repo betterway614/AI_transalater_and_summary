@@ -178,7 +178,7 @@ export default function SummaryPanel() {
           ) : (
             <Box sx={{ px: 2, pb: 2 }}>
               <Typography variant="body2" color="text.disabled">
-                翻译结束后点击 AI 按钮生成总结
+                翻译结束后点击 AI 按钮生成总结，也可在历史记录中对已有会话生成总结
               </Typography>
             </Box>
           )}

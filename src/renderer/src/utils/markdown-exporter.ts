@@ -70,3 +70,24 @@ export function formatSummaryMarkdown(summary: string, sourceEntries?: number): 
 
   return lines.join('\n')
 }
+
+/**
+ * Extract keywords from a markdown summary by parsing ## level headings.
+ * Falls back to first N meaningful words if no headings found.
+ */
+export function extractKeywords(markdown: string, maxCount = 5): string[] {
+  const headingRegex = /^## (.+)$/gm
+  const matches: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = headingRegex.exec(markdown)) !== null && matches.length < maxCount) {
+    const text = m[1].trim()
+      .replace(/[*_`~#]/g, '')
+      .replace(/[0-9]+[.、．]\s*/, '')
+      .replace(/^[-*+]\s*/, '')
+      .trim()
+    if (text && text.length <= 20) {
+      matches.push(text)
+    }
+  }
+  return matches
+}

@@ -188,7 +188,7 @@ export default function ControlBar({ onStart, onStop, audioLevelRef }: ControlBa
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title="复制纯文本(含总结)" arrow>
+        <Tooltip title={summary ? '复制纯文本(含总结)' : '复制纯文本'} arrow>
           <span>
             <IconButton size="small" onClick={handleCopyPlainText} disabled={entries.length === 0} sx={iconBtnSx}>
               <TextSnippetIcon fontSize="small" />

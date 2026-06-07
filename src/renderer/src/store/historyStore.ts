@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { SubtitleEntry, InputMode } from '@shared/types'
 import { useSnapshotStore } from './snapshotStore'
+import { extractKeywords } from '../utils/markdown-exporter'
 
 export interface HistorySession {
   id: string
@@ -9,6 +10,7 @@ export interface HistorySession {
   endTime: number
   entries: SubtitleEntry[]
   summary: string | null
+  keywords: string[]
 }
 
 interface HistoryState {
@@ -16,6 +18,7 @@ interface HistoryState {
   loadHistory: () => Promise<void>
   saveSession: (entries: SubtitleEntry[], mode: InputMode, summary?: string | null) => Promise<void>
   updateLatestSummary: (summary: string) => Promise<void>
+  updateSessionSummary: (id: string, summary: string) => Promise<void>
   deleteSession: (id: string) => Promise<void>
   clearHistory: () => Promise<void>
 }
@@ -30,8 +33,13 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     try {
       const saved = await window.api?.store?.get(STORAGE_KEY)
       if (Array.isArray(saved)) {
-        set({ sessions: saved })
-        console.log(`[History] Loaded ${saved.length} sessions`)
+        // Backward compat: ensure all sessions have keywords field
+        const sessions = saved.map((s: any) => ({
+          ...s,
+          keywords: Array.isArray(s.keywords) ? s.keywords : (s.summary ? extractKeywords(s.summary) : [])
+        }))
+        set({ sessions })
+        console.log(`[History] Loaded ${sessions.length} sessions`)
       }
     } catch (err) {
       console.error('[History] Failed to load:', err)
@@ -47,7 +55,8 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       startTime: entries[0].timestamp,
       endTime: entries[entries.length - 1].timestamp,
       entries: entries.map(e => ({ ...e })), // deep copy
-      summary: summary || null
+      summary: summary || null,
+      keywords: summary ? extractKeywords(summary) : []
     }
 
     const sessions = [session, ...get().sessions].slice(0, MAX_SESSIONS)
@@ -66,8 +75,9 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     const sessions = get().sessions
     if (sessions.length === 0) return
 
+    const keywords = extractKeywords(summary)
     const updated = [...sessions]
-    updated[0] = { ...updated[0], summary }
+    updated[0] = { ...updated[0], summary, keywords }
     set({ sessions: updated })
 
     try {
@@ -75,6 +85,24 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       console.log(`[History] Updated summary for latest session ${updated[0].id}`)
     } catch (err) {
       console.error('[History] Failed to update summary:', err)
+    }
+  },
+
+  updateSessionSummary: async (id: string, summary: string) => {
+    const sessions = get().sessions
+    const idx = sessions.findIndex(s => s.id === id)
+    if (idx === -1) return
+
+    const keywords = extractKeywords(summary)
+    const updated = [...sessions]
+    updated[idx] = { ...updated[idx], summary, keywords }
+    set({ sessions: updated })
+
+    try {
+      await window.api?.store?.set(STORAGE_KEY, updated)
+      console.log(`[History] Updated summary for session ${id}`)
+    } catch (err) {
+      console.error('[History] Failed to update session summary:', err)
     }
   },
 

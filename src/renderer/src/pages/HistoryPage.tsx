@@ -1,4 +1,4 @@
-import { Box, Typography, Paper, Chip, IconButton, Tooltip, Collapse, Dialog, DialogTitle, DialogActions, Button, TextField, InputAdornment, DialogContent, Tabs, Tab } from '@mui/material'
+import { Box, Typography, Paper, Chip, IconButton, Tooltip, Collapse, Dialog, DialogTitle, DialogActions, Button, TextField, InputAdornment, DialogContent, Tabs, Tab, CircularProgress } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import HistoryIcon from '@mui/icons-material/History'
@@ -8,8 +8,10 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ArticleIcon from '@mui/icons-material/Article'
 import AccountTreeIcon from '@mui/icons-material/AccountTree'
 import CloseIcon from '@mui/icons-material/Close'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import { useEffect, useState, useMemo } from 'react'
 import { useHistoryStore, type HistorySession } from '../store/historyStore'
+import { useSummaryStore } from '../store/summaryStore'
 import MindMap from '../components/Summary/MindMap'
 
 const modeLabels: Record<string, string> = {
@@ -20,6 +22,9 @@ const modeLabels: Record<string, string> = {
 
 export default function HistoryPage() {
   const { sessions, loadHistory, deleteSession, clearHistory } = useHistoryStore()
+  const generateSummary = useSummaryStore((s) => s.generateSummary)
+  const isGenerating = useSummaryStore((s) => s.isGenerating)
+  const sessionGeneratingId = useSummaryStore((s) => s.sessionGeneratingId)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [modeFilter, setModeFilter] = useState<string | null>(null)
@@ -29,6 +34,16 @@ export default function HistoryPage() {
   useEffect(() => {
     loadHistory()
   }, [loadHistory])
+
+  // Sync detail dialog when session summary is updated (e.g. after generating from history)
+  useEffect(() => {
+    if (detailSession) {
+      const updated = sessions.find(s => s.id === detailSession.id)
+      if (updated && updated.summary !== detailSession.summary) {
+        setDetailSession(updated)
+      }
+    }
+  }, [sessions, detailSession])
 
   const handleCopySession = (session: HistorySession) => {
     const text = session.entries
@@ -56,6 +71,11 @@ export default function HistoryPage() {
     }
     return result
   }, [sessions, searchQuery, modeFilter])
+
+  const handleGenerateSummary = (session: HistorySession, e: React.MouseEvent) => {
+    e.stopPropagation()
+    generateSummary({ entries: session.entries, sessionId: session.id })
+  }
 
   return (
     <Box sx={{ p: 2, maxWidth: 800, mx: 'auto', width: '100%' }}>
@@ -147,6 +167,28 @@ export default function HistoryPage() {
                   {session.summary && (
                     <Chip label="含总结" size="small" variant="outlined" color="secondary" />
                   )}
+                  {!session.summary && (
+                    <Tooltip title="为此会话生成 AI 总结" arrow>
+                      <Chip
+                        label={
+                          sessionGeneratingId === session.id
+                            ? '生成中...'
+                            : '生成总结'
+                        }
+                        size="small"
+                        icon={
+                          sessionGeneratingId === session.id
+                            ? <CircularProgress size={12} />
+                            : <AutoAwesomeIcon sx={{ fontSize: 14 }} />
+                        }
+                        variant="outlined"
+                        color="primary"
+                        disabled={isGenerating}
+                        onClick={(e) => handleGenerateSummary(session, e as any)}
+                        sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'rgba(25, 118, 210, 0.08)' } }}
+                      />
+                    </Tooltip>
+                  )}
                 </Box>
                 <Box onClick={(e) => e.stopPropagation()}>
                   <Tooltip title="复制" arrow>
@@ -169,6 +211,28 @@ export default function HistoryPage() {
                   </Tooltip>
                 </Box>
               </Box>
+
+              {/* Keywords */}
+              {session.keywords && session.keywords.length > 0 && (
+                <Box sx={{ display: 'flex', gap: 0.5, mb: 1, flexWrap: 'wrap' }}>
+                  {session.keywords.map((kw, idx) => (
+                    <Chip
+                      key={idx}
+                      label={kw}
+                      size="small"
+                      sx={{
+                        fontSize: 11,
+                        height: 22,
+                        bgcolor: 'rgba(25, 118, 210, 0.06)',
+                        color: 'primary.main',
+                        border: '1px solid',
+                        borderColor: 'rgba(25, 118, 210, 0.15)',
+                        '& .MuiChip-label': { px: 1 }
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
 
               {/* Preview: first 3 entries */}
               <Box sx={{ maxHeight: 140, overflow: 'hidden' }}>
@@ -203,6 +267,9 @@ export default function HistoryPage() {
         onClose={() => setDetailSession(null)}
         onCopy={handleCopySession}
         onDelete={(id) => { deleteSession(id); setDetailSession(null) }}
+        onGenerateSummary={handleGenerateSummary}
+        isGenerating={isGenerating}
+        generatingSessionId={sessionGeneratingId}
       />
 
       {/* Delete confirmation dialog */}
@@ -284,12 +351,18 @@ function SessionDetailDialog({
   session,
   onClose,
   onCopy,
-  onDelete
+  onDelete,
+  onGenerateSummary,
+  isGenerating,
+  generatingSessionId
 }: {
   session: HistorySession | null
   onClose: () => void
   onCopy: (s: HistorySession) => void
   onDelete: (id: string) => void
+  onGenerateSummary: (s: HistorySession, e: React.MouseEvent) => void
+  isGenerating: boolean
+  generatingSessionId: string | null
 }) {
   const [tab, setTab] = useState(0)
   const showSummaryTabs = session?.summary != null
@@ -357,6 +430,43 @@ function SessionDetailDialog({
 
       {/* Content */}
       <DialogContent sx={{ flex: 1, overflow: 'auto', pt: showSummaryTabs ? 1 : 2 }}>
+        {/* Summary generation prompt when no summary exists */}
+        {!showSummaryTabs && (
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1.5,
+              py: 2,
+              mb: 2,
+              borderRadius: 1.5,
+              bgcolor: 'rgba(25, 118, 210, 0.04)',
+              border: '1px dashed',
+              borderColor: 'primary.main',
+            }}
+          >
+            <AutoAwesomeIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+            <Typography variant="body2" color="text.secondary">
+              此会话还没有 AI 总结
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              startIcon={
+                isGenerating && generatingSessionId === session.id
+                  ? <CircularProgress size={14} />
+                  : <AutoAwesomeIcon sx={{ fontSize: 16 }} />
+              }
+              disabled={isGenerating}
+              onClick={(e) => onGenerateSummary(session, e as any)}
+            >
+              {isGenerating && generatingSessionId === session.id ? '生成中...' : '生成总结'}
+            </Button>
+          </Box>
+        )}
+
         {(!showSummaryTabs || tab === 0) && (
           <Box>
             {session.entries.map((entry) => (

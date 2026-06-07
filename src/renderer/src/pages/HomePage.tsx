@@ -44,6 +44,20 @@ export default function HomePage() {
     window.api?.floating.updateSummary(summary)
   }, [summary])
 
+  // Sync subtitle settings to floating window
+  const subtitleSettings = useSettingsStore((s) => s.settings.subtitle)
+  useEffect(() => {
+    window.api?.floating.updateSubtitleSettings(subtitleSettings)
+  }, [subtitleSettings])
+
+  // Clear previous session when switching input mode
+  useEffect(() => {
+    if (useAppStore.getState().status === 'idle' && useSubtitleStore.getState().entries.length > 0) {
+      useSubtitleStore.getState().clearEntries()
+      useSummaryStore.getState().reset()
+    }
+  }, [mode])
+
   // Microphone capture
   const handleAudioChunk = useCallback(
     (blob: Blob) => {
