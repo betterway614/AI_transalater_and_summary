@@ -32,6 +32,13 @@ const api = {
       const handler = (_event: Electron.IpcRendererEvent, theme: string) => callback(theme)
       ipcRenderer.on(IPC_CHANNELS.FLOATING_UPDATE_THEME, handler)
       return () => { ipcRenderer.removeListener(IPC_CHANNELS.FLOATING_UPDATE_THEME, handler) }
+    },
+    updateSummary: (summary: string | null): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FLOATING_SUMMARY_FROM_RENDERER, summary),
+    onSummaryUpdate: (callback: (summary: string | null) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, summary: string | null) => callback(summary)
+      ipcRenderer.on(IPC_CHANNELS.FLOATING_UPDATE_SUMMARY, handler)
+      return () => { ipcRenderer.removeListener(IPC_CHANNELS.FLOATING_UPDATE_SUMMARY, handler) }
     }
   },
 

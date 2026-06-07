@@ -5,6 +5,7 @@ import { IPC_CHANNELS } from '../shared/ipc-channels'
 let floatingWindow: BrowserWindow | null = null
 let subtitleCache: any[] = []
 let themeCache: string = 'dark'
+let summaryCache: string | null = null
 
 const COMPACT_H = 36
 const EXPANDED_H = 240
@@ -60,6 +61,9 @@ export function createFloatingSubtitleWindow(): BrowserWindow {
       floatingWindow?.webContents.send(IPC_CHANNELS.FLOATING_UPDATE_SUBTITLES, subtitleCache)
     }
     floatingWindow?.webContents.send(IPC_CHANNELS.FLOATING_UPDATE_THEME, themeCache)
+    if (summaryCache) {
+      floatingWindow?.webContents.send(IPC_CHANNELS.FLOATING_UPDATE_SUMMARY, summaryCache)
+    }
   })
 
   floatingWindow.on('closed', () => {
@@ -98,6 +102,13 @@ export function sendThemeToFloat(theme: string): void {
   }
 }
 
+export function sendSummaryToFloat(summary: string | null): void {
+  summaryCache = summary
+  if (floatingWindow && !floatingWindow.isDestroyed()) {
+    floatingWindow.webContents.send(IPC_CHANNELS.FLOATING_UPDATE_SUMMARY, summary)
+  }
+}
+
 export function registerFloatingIpc(): void {
   ipcMain.handle(IPC_CHANNELS.FLOATING_SHOW, () => {
     createFloatingSubtitleWindow()
@@ -116,6 +127,11 @@ export function registerFloatingIpc(): void {
 
   ipcMain.handle(IPC_CHANNELS.FLOATING_THEME_FROM_RENDERER, (_event, theme: string) => {
     sendThemeToFloat(theme)
+    return true
+  })
+
+  ipcMain.handle(IPC_CHANNELS.FLOATING_SUMMARY_FROM_RENDERER, (_event, summary: string | null) => {
+    sendSummaryToFloat(summary)
     return true
   })
 

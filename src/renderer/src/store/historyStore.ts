@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { SubtitleEntry, InputMode } from '@shared/types'
+import { useSnapshotStore } from './snapshotStore'
 
 export interface HistorySession {
   id: string
@@ -7,12 +8,13 @@ export interface HistorySession {
   startTime: number
   endTime: number
   entries: SubtitleEntry[]
+  summary: string | null
 }
 
 interface HistoryState {
   sessions: HistorySession[]
   loadHistory: () => Promise<void>
-  saveSession: (entries: SubtitleEntry[], mode: InputMode) => Promise<void>
+  saveSession: (entries: SubtitleEntry[], mode: InputMode, summary?: string | null) => Promise<void>
   deleteSession: (id: string) => Promise<void>
   clearHistory: () => Promise<void>
 }
@@ -35,7 +37,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     }
   },
 
-  saveSession: async (entries: SubtitleEntry[], mode: InputMode) => {
+  saveSession: async (entries: SubtitleEntry[], mode: InputMode, summary?: string | null) => {
     if (entries.length === 0) return
 
     const session: HistorySession = {
@@ -43,7 +45,8 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       mode,
       startTime: entries[0].timestamp,
       endTime: entries[entries.length - 1].timestamp,
-      entries: entries.map(e => ({ ...e })) // deep copy
+      entries: entries.map(e => ({ ...e })), // deep copy
+      summary: summary || null
     }
 
     const sessions = [session, ...get().sessions].slice(0, MAX_SESSIONS)
@@ -51,6 +54,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
 
     try {
       await window.api?.store?.set(STORAGE_KEY, sessions)
+      useSnapshotStore.getState().clearSnapshot()
       console.log(`[History] Saved session with ${entries.length} entries, total: ${sessions.length}`)
     } catch (err) {
       console.error('[History] Failed to save:', err)

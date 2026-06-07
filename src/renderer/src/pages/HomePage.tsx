@@ -37,6 +37,12 @@ export default function HomePage() {
     window.api?.floating.updateTheme(theme)
   }, [theme])
 
+  // Sync summary to floating window
+  const summary = useSummaryStore((s) => s.summary)
+  useEffect(() => {
+    window.api?.floating.updateSummary(summary)
+  }, [summary])
+
   // Microphone capture
   const handleAudioChunk = useCallback(
     (blob: Blob) => {
@@ -45,14 +51,16 @@ export default function HomePage() {
     },
     [processAudioChunk, mode]
   )
-  const { start: startMicCapture, stop: stopMicCapture } = useAudioCapture({
+  const { start: startMicCapture, stop: stopMicCapture, audioLevelRef } = useAudioCapture({
     onAudioChunk: handleAudioChunk
   })
 
   // System audio capture (via Electron desktopCapturer)
-  const { start: startSystemAudio, stop: stopSystemAudio } = useSystemAudioCapture({
+  const { start: startSystemAudio, stop: stopSystemAudio, audioLevelRef: sysAudioLevelRef } = useSystemAudioCapture({
     onAudioChunk: handleAudioChunk
   })
+
+  const activeAudioLevel = mode === 'system-audio' ? sysAudioLevelRef : audioLevelRef
 
   const clearEntries = useSubtitleStore((s) => s.clearEntries)
 
@@ -94,7 +102,7 @@ export default function HomePage() {
       )}
       <SubtitlePanel />
       <SummaryPanel />
-      <ControlBar onStop={handleStop} />
+      <ControlBar onStop={handleStop} audioLevelRef={activeAudioLevel} />
     </Box>
   )
 }

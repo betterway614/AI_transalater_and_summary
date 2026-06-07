@@ -17,6 +17,20 @@ Rules:
 - Keep technical terms accurate
 - Be concise and natural in Chinese`
 
+async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (attempt === maxRetries) throw err
+      const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
+      console.warn(`[DeepSeek] Attempt ${attempt + 1} failed, retrying in ${delay}ms:`, err)
+      await new Promise(r => setTimeout(r, delay))
+    }
+  }
+  throw new Error('Unreachable')
+}
+
 export class DeepSeekService {
   private apiKey: string
   private model: string
@@ -28,32 +42,25 @@ export class DeepSeekService {
     this.baseUrl = config.baseUrl || 'https://api.deepseek.com'
   }
 
-  /**
-   * Translate text using DeepSeek API with streaming
-   * Yields partial translations as they arrive
-   */
   async *streamingTranslate(text: string, context: string[] = []): AsyncGenerator<TranslateResult> {
-    const messages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...context.map((t) => ({ role: 'user', content: `Translate to Chinese: ${t}` })),
-      { role: 'user', content: `Translate to Chinese: ${text}` }
-    ]
-
-    const result = await window.api.ai.chatCompletion({
-      baseUrl: this.baseUrl,
-      apiKey: this.apiKey,
-      model: this.model,
-      messages: messages as Array<{ role: string; content: string }>,
-      temperature: 0.3,
-      maxTokens: 1024
+    const result = await retryWithBackoff(async () => {
+      const messages = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...context.map((t) => ({ role: 'user', content: `Translate to Chinese: ${t}` })),
+        { role: 'user', content: `Translate to Chinese: ${text}` }
+      ]
+      return await window.api.ai.chatCompletion({
+        baseUrl: this.baseUrl,
+        apiKey: this.apiKey,
+        model: this.model,
+        messages: messages as Array<{ role: string; content: string }>,
+        temperature: 0.3,
+        maxTokens: 1024
+      })
     })
-
     yield { text: result.text, isDone: true }
   }
 
-  /**
-   * Non-streaming translate (single request)
-   */
   async translate(text: string, context: string[] = []): Promise<string> {
     let result = ''
     for await (const chunk of this.streamingTranslate(text, context)) {

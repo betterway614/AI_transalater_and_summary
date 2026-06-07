@@ -1,8 +1,8 @@
-import { TextField, Button, Paper, Select, MenuItem, FormControl, InputLabel, Chip, Typography, Box, CircularProgress } from '@mui/material'
+import { TextField, Button, Paper, Select, MenuItem, FormControl, InputLabel, Chip, Typography, Box, CircularProgress, LinearProgress } from '@mui/material'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import StopIcon from '@mui/icons-material/Stop'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { useURLAudio } from '../../hooks/useURLAudio'
 import type { VideoInfo } from '@shared/types'
@@ -18,7 +18,18 @@ export default function URLInputPanel() {
   const mode = useAppStore((s) => s.mode)
   const startTranslation = useAppStore((s) => s.startTranslation)
   const stopTranslation = useAppStore((s) => s.stopTranslation)
-  const { start, stop } = useURLAudio()
+  const { start, stop, getProgress } = useURLAudio()
+
+  const [downloadProgress, setDownloadProgress] = useState(0)
+
+  useEffect(() => {
+    if (!isRunning) { setDownloadProgress(0); return }
+    const id = setInterval(() => {
+      const p = getProgress()
+      setDownloadProgress(p)
+    }, 300)
+    return () => clearInterval(id)
+  }, [isRunning, getProgress])
 
   const isRunning = status !== 'idle' && status !== 'error'
 
@@ -105,6 +116,16 @@ export default function URLInputPanel() {
           {isRunning ? '停止' : '开始'}
         </Button>
       </Box>
+
+      {/* Download progress bar */}
+      {isRunning && status === 'connecting' && downloadProgress > 0 && (
+        <Box sx={{ mt: 1 }}>
+          <LinearProgress variant="determinate" value={downloadProgress * 100} sx={{ borderRadius: 1, height: 6 }} />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            下载中 {Math.round(downloadProgress * 100)}%
+          </Typography>
+        </Box>
+      )}
 
       {infoError && (
         <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block', whiteSpace: 'pre-line' }}>

@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import type { SubtitleEntry, InputMode } from '@shared/types'
-import { useHistoryStore } from './historyStore'
 
 interface SubtitleState {
   entries: SubtitleEntry[]
@@ -47,12 +46,6 @@ export const useSubtitleStore = create<SubtitleState>((set) => ({
     })),
 
   clearEntries: () => {
-    // Save current entries as a history session before clearing
-    const currentEntries = useSubtitleStore.getState().entries
-    if (currentEntries.length > 0) {
-      const mode = currentEntries[0].mode || 'url'
-      useHistoryStore.getState().saveSession(currentEntries, mode)
-    }
     set({ entries: [] })
   },
 

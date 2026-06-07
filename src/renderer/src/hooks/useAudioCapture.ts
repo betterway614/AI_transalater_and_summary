@@ -22,6 +22,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
   const onAudioChunkRef = useRef(onAudioChunk)
   const isCapturingRef = useRef(false)
   const sampleRateRef = useRef(16000) // Locked at start time
+  const audioLevelRef = useRef(0)
 
   useEffect(() => {
     onAudioChunkRef.current = onAudioChunk
@@ -109,6 +110,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
         for (let i = 0; i < chunk.length; i++) rms += chunk[i] * chunk[i]
         rms = Math.sqrt(rms / chunk.length)
         const db = 20 * Math.log10(rms + 1e-10)
+        audioLevelRef.current = db
 
         const hasVoice = detectVoiceActivity(chunk, vadThreshold)
 
@@ -181,5 +183,5 @@ export function useAudioCapture(options: AudioCaptureOptions) {
     }
   }, [])
 
-  return { start, stop, isCapturing }
+  return { start, stop, isCapturing, audioLevelRef }
 }

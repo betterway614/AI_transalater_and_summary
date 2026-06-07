@@ -2,6 +2,7 @@ export interface SummaryConfig {
   apiKey: string
   model?: string
   baseUrl?: string
+  summaryPrompt?: string
 }
 
 export interface SummaryResult {
@@ -32,20 +33,24 @@ export class SummaryService {
   private apiKey: string
   private model: string
   private baseUrl: string
+  private customPrompt: string
 
   constructor(config: SummaryConfig) {
     this.apiKey = config.apiKey
     this.model = config.model || 'deepseek-chat'
     this.baseUrl = config.baseUrl || 'https://api.deepseek.com'
+    this.customPrompt = config.summaryPrompt || ''
   }
 
   async *streamingSummarize(text: string): AsyncGenerator<SummaryResult> {
+    const systemPrompt = this.customPrompt || SUMMARY_SYSTEM_PROMPT
+
     const result = await window.api.ai.chatCompletion({
       baseUrl: this.baseUrl,
       apiKey: this.apiKey,
       model: this.model,
       messages: [
-        { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: `请对以下内容生成结构化的思维导图大纲：\n\n${text}` }
       ],
       temperature: 0.3,

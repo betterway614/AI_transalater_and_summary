@@ -13,6 +13,7 @@ import TranslateIcon from '@mui/icons-material/Translate'
 import SubtitlesIcon from '@mui/icons-material/Subtitles'
 import HeadsetIcon from '@mui/icons-material/Headset'
 import LoginIcon from '@mui/icons-material/Login'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import { useState } from 'react'
 import { useSettingsStore } from '../store/settingsStore'
 import { WHISPER_PRESETS, TRANSLATOR_PRESETS, WHISPER_LANGUAGES } from '@shared/constants'
@@ -392,6 +393,29 @@ export default function SettingsPage() {
             <MenuItem value="high">高（检测轻微语音）</MenuItem>
           </Select>
         </FormControl>
+      </Paper>
+
+      {/* AI 总结设置 */}
+      <Paper elevation={0} sx={paperSx}>
+        <SectionHeader icon={<AutoAwesomeIcon fontSize="small" />} title="AI 总结设置" />
+
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          自定义总结提示词（留空使用默认）
+        </Typography>
+        <TextField
+          fullWidth
+          size="small"
+          multiline
+          minRows={3}
+          maxRows={6}
+          value={settings.general.summaryPrompt}
+          onChange={(e) => updateGeneral({ summaryPrompt: e.target.value })}
+          placeholder="你是一位专业的知识整理与会议记录分析师。请将内容整理为结构化的思维导图大纲..."
+          sx={{ mb: 1 }}
+        />
+        <Typography variant="caption" color="text.disabled">
+          自定义 prompt 会替换默认的总结系统提示词。留空则使用默认提示词。
+        </Typography>
       </Paper>
 
       {/* 视频平台登录 */}

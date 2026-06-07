@@ -16,6 +16,7 @@ interface Props {
 
 export default function FloatingSubtitleWindow({ isDark }: Props) {
   const [entries, setEntries] = useState<SubtitleEntry[]>([])
+  const [summary, setSummary] = useState<string | null>(null)
   const [opacity, setOpacity] = useState(0.92)
   const [expanded, setExpanded] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -26,6 +27,12 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
     const unsub = window.api.floating.onSubtitlesUpdate((newEntries) => {
       setEntries(newEntries.slice(-MAX_ENTRIES))
     })
+    return unsub
+  }, [])
+
+  useEffect(() => {
+    if (!window.api?.floating) return
+    const unsub = window.api.floating.onSummaryUpdate((s) => setSummary(s))
     return unsub
   }, [])
 
@@ -133,6 +140,18 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
             transition: 'background-color 0.3s ease'
           }}
         />
+        {summary && (
+          <Box
+            className="no-drag"
+            sx={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              bgcolor: isDark ? '#c084fc' : '#9333ea',
+              flexShrink: 0
+            }}
+          />
+        )}
       </Box>
     )
   }
@@ -275,6 +294,26 @@ export default function FloatingSubtitleWindow({ isDark }: Props) {
               </Typography>
             </Box>
           ))
+        )}
+        {summary && entries.length > 0 && (
+          <Box sx={{ mt: 0.5, pt: 0.5, borderTop: `1px solid ${borderColor}` }}>
+            <Typography variant="caption" sx={{ color: isDark ? '#c084fc' : '#9333ea', fontSize: 10, fontWeight: 600 }}>
+              AI 总结
+            </Typography>
+            <Typography variant="body2" sx={{
+              color: textSecondary,
+              fontSize: 11,
+              lineHeight: 1.5,
+              maxHeight: 60,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical'
+            }}>
+              {summary}
+            </Typography>
+          </Box>
         )}
       </Box>
 

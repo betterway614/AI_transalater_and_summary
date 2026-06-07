@@ -13,6 +13,8 @@ interface ElectronAPI {
     setExpanded: (expanded: boolean) => void
     onSubtitlesUpdate: (callback: (entries: import('../shared/types').SubtitleEntry[]) => void) => () => void
     onThemeUpdate: (callback: (theme: string) => void) => () => void
+    updateSummary: (summary: string | null) => Promise<boolean>
+    onSummaryUpdate: (callback: (summary: string | null) => void) => () => void
   }
   store: {
     get: (key: string) => Promise<unknown>

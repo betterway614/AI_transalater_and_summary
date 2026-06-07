@@ -28,6 +28,30 @@ export function formatMarkdown(
 }
 
 /**
+ * Format translation entries as plain text
+ */
+export function formatPlainText(
+  entries: Array<{ originalText: string; translatedText: string }>,
+  summary?: string | null
+): string {
+  const lines: string[] = []
+
+  for (const entry of entries) {
+    lines.push(entry.originalText)
+    lines.push(entry.translatedText)
+    lines.push('')
+  }
+
+  if (summary) {
+    lines.push('--- AI 总结 ---')
+    lines.push('')
+    lines.push(summary)
+  }
+
+  return lines.join('\n')
+}
+
+/**
  * Format summary content as proper Markdown
  */
 export function formatSummaryMarkdown(summary: string, sourceEntries?: number): string {

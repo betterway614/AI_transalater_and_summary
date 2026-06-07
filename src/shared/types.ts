@@ -80,6 +80,7 @@ export interface AudioSettings {
 export interface GeneralSettings {
   theme: 'light' | 'dark' | 'system';
   language: string;
+  summaryPrompt: string;
 }
 
 // ===== 应用设置 =====
@@ -122,5 +123,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   general: {
     theme: 'dark',
     language: 'zh-CN',
+    summaryPrompt: '',
   },
 };
