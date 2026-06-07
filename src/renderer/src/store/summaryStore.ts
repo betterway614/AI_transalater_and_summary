@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useSubtitleStore } from './subtitleStore'
 import { useSettingsStore } from './settingsStore'
+import { useHistoryStore } from './historyStore'
 import { SummaryService } from '../services/summary.service'
 
 interface SummaryState {
@@ -22,6 +23,10 @@ export const useSummaryStore = create<SummaryState>((set, get) => ({
   setSummary: (summary) => {
     set({ summary })
     window.api?.store?.set(STORAGE_KEY, summary).catch(err => console.error('[Summary] Persist error:', err))
+    // Sync summary to the latest saved history session
+    if (summary) {
+      useHistoryStore.getState().updateLatestSummary(summary)
+    }
   },
 
   setIsGenerating: (isGenerating) => set({ isGenerating }),

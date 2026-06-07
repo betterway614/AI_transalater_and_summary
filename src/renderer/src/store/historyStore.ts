@@ -15,6 +15,7 @@ interface HistoryState {
   sessions: HistorySession[]
   loadHistory: () => Promise<void>
   saveSession: (entries: SubtitleEntry[], mode: InputMode, summary?: string | null) => Promise<void>
+  updateLatestSummary: (summary: string) => Promise<void>
   deleteSession: (id: string) => Promise<void>
   clearHistory: () => Promise<void>
 }
@@ -58,6 +59,22 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       console.log(`[History] Saved session with ${entries.length} entries, total: ${sessions.length}`)
     } catch (err) {
       console.error('[History] Failed to save:', err)
+    }
+  },
+
+  updateLatestSummary: async (summary: string) => {
+    const sessions = get().sessions
+    if (sessions.length === 0) return
+
+    const updated = [...sessions]
+    updated[0] = { ...updated[0], summary }
+    set({ sessions: updated })
+
+    try {
+      await window.api?.store?.set(STORAGE_KEY, updated)
+      console.log(`[History] Updated summary for latest session ${updated[0].id}`)
+    } catch (err) {
+      console.error('[History] Failed to update summary:', err)
     }
   },
 
