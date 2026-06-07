@@ -8,6 +8,7 @@ import ControlBar from '../components/Common/ControlBar'
 import SummaryPanel from '../components/Summary/SummaryPanel'
 import { useAppStore } from '../store/appStore'
 import { useSubtitleStore } from '../store/subtitleStore'
+import { useSummaryStore } from '../store/summaryStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useSubtitle } from '../hooks/useSubtitle'
 import { useAudioCapture } from '../hooks/useAudioCapture'
@@ -58,6 +59,7 @@ export default function HomePage() {
   const handleStart = useCallback(async () => {
     log(`[HomePage] handleStart called, mode=${mode}`)
     clearEntries() // Clear previous entries before starting new capture
+    useSummaryStore.getState().reset() // Clear previous summary
     startTranslation()
     try {
       if (mode === 'system-audio') {

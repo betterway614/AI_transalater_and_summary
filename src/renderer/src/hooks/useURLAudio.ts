@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react'
 import { useSubtitleStore } from '../store/subtitleStore'
+import { useSummaryStore } from '../store/summaryStore'
 import { useAppStore } from '../store/appStore'
 import type { InputMode, SubtitleEntry } from '@shared/types'
 import { WhisperService } from '../services/whisper.service'
@@ -63,6 +64,7 @@ export function useURLAudio() {
     cancelledRef.current = false
     progressRef.current = 0
     clearEntries() // Clear previous video's entries before starting new one
+    useSummaryStore.getState().reset() // Clear previous summary
     setStatus('connecting')
 
     try {
