@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock window.api for store/service tests
 const mockApi = {
-  ai: { transcribe: vi.fn(), chatCompletion: vi.fn(), testConnection: vi.fn() },
+  ai: { transcribe: vi.fn(), chatCompletion: vi.fn(), chatCompletionStream: vi.fn(), testConnection: vi.fn() },
   store: {
     get: vi.fn().mockResolvedValue(null),
     set: vi.fn().mockResolvedValue({ success: true }),
@@ -66,6 +66,16 @@ import { WhisperService } from '../src/renderer/src/services/whisper.service'
 import { DeepSeekService } from '../src/renderer/src/services/deepseek.service'
 import { detectVoiceActivity, pcmToWav, computeTextOverlap, splitSentences } from '../src/renderer/src/services/audio-processor'
 import { DEFAULT_SETTINGS } from '../src/shared/types'
+
+/** Helper: mock chatCompletionStream to call onChunk once then resolve */
+function mockStream(text: string) {
+  mockApi.ai.chatCompletionStream.mockImplementationOnce(
+    (_config: any, onChunk: (t: string) => void) => {
+      onChunk(text)
+      return Promise.resolve(text)
+    }
+  )
+}
 
 describe('Smoke: Full Pipeline — Voice → Ordered Subtitles → Summary', () => {
   beforeEach(() => {
@@ -140,7 +150,7 @@ describe('Smoke: Full Pipeline — Voice → Ordered Subtitles → Summary', () 
     expect((entries[0] as any)._order).toBeLessThan((entries[1] as any)._order)
 
     // Step 8: Translate entries
-    mockApi.ai.chatCompletion.mockResolvedValueOnce({ text: '你好世界。' })
+    mockStream('你好世界。')
     const deepseek = new DeepSeekService({ apiKey: 'smoke-test-key' })
     let trans1 = ''
     for await (const chunk of deepseek.streamingTranslate(entries[0].originalText)) {
@@ -149,7 +159,7 @@ describe('Smoke: Full Pipeline — Voice → Ordered Subtitles → Summary', () 
     store.updateEntry(entries[0].id, trans1)
     store.markFinal(entries[0].id, trans1)
 
-    mockApi.ai.chatCompletion.mockResolvedValueOnce({ text: '这是一个测试。' })
+    mockStream('这是一个测试。')
     let trans2 = ''
     for await (const chunk of deepseek.streamingTranslate(entries[1].originalText)) {
       trans2 = chunk.text

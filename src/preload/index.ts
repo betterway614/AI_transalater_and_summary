@@ -124,6 +124,38 @@ const api = {
     }): Promise<{ text: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.AI_CHAT_COMPLETION, config),
 
+    /**
+     * 流式 chat completion，实时推送 translation chunk
+     * 返回 Promise<最终全文>，同时通过 onChunk 回调实时推送中间结果
+     */
+    chatCompletionStream: (
+      config: {
+        baseUrl: string; apiKey: string; model: string;
+        messages: Array<{ role: string; content: string }>;
+        temperature?: number; maxTokens?: number;
+      },
+      onChunk: (text: string) => void
+    ): Promise<string> => {
+      const requestId = `stream_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+
+      const handler = (_event: Electron.IpcRendererEvent, data: { requestId: string; text: string }) => {
+        if (data.requestId === requestId) {
+          onChunk(data.text)
+        }
+      }
+      ipcRenderer.on(IPC_CHANNELS.AI_CHAT_COMPLETION_STREAM_CHUNK, handler)
+
+      return ipcRenderer.invoke(IPC_CHANNELS.AI_CHAT_COMPLETION, { ...config, requestId })
+        .then((result: { text: string }) => {
+          ipcRenderer.removeListener(IPC_CHANNELS.AI_CHAT_COMPLETION_STREAM_CHUNK, handler)
+          return result.text
+        })
+        .catch((err: Error) => {
+          ipcRenderer.removeListener(IPC_CHANNELS.AI_CHAT_COMPLETION_STREAM_CHUNK, handler)
+          throw err
+        })
+    },
+
     testConnection: (config: {
       baseUrl: string; apiKey: string;
     }): Promise<{ ok: boolean; status: number; statusText: string }> =>

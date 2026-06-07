@@ -32,6 +32,7 @@ export function createMockApi() {
     ai: {
       transcribe: vi.fn(),
       chatCompletion: vi.fn(),
+      chatCompletionStream: vi.fn(),
       testConnection: vi.fn(),
     },
     logToMain: vi.fn(),

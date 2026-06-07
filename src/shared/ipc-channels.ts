@@ -57,6 +57,7 @@ export const IPC_CHANNELS = {
   // AI API 代理（主进程中转，避免 CORS）
   AI_WHISPER_TRANSCRIBE: 'ai:whisper-transcribe',
   AI_CHAT_COMPLETION: 'ai:chat-completion',
+  AI_CHAT_COMPLETION_STREAM_CHUNK: 'ai:chat-completion-stream-chunk',
   AI_TEST_CONNECTION: 'ai:test-connection',
 
   // 渲染进程日志 -> 主进程终端

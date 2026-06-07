@@ -159,17 +159,17 @@ export function registerAiIpc(): void {
     }
   )
 
-  // Chat Completions（翻译/摘要，流式请求在主进程内收集完成后返回）
+  // Chat Completions（流式请求，实时推送 chunk 到渲染进程）
   ipcMain.handle(
     IPC_CHANNELS.AI_CHAT_COMPLETION,
-    async (_event, config: {
+    async (event, config: {
       baseUrl: string; apiKey: string; model: string; messages: Array<{ role: string; content: string }>;
-      temperature?: number; maxTokens?: number;
+      temperature?: number; maxTokens?: number; requestId?: string;
     }) => {
-      const { baseUrl, apiKey, model, messages, temperature, maxTokens } = config
+      const { baseUrl, apiKey, model, messages, temperature, maxTokens, requestId } = config
       const url = `${baseUrl}/v1/chat/completions`
 
-      log.debug(`[AI-IPC] Chat POST ${url}, model=${model}, messages=${messages.length}`)
+      log.debug(`[AI-IPC] Chat POST ${url}, model=${model}, messages=${messages.length}, requestId=${requestId}`)
 
       const response = await fetch(url, {
         method: 'POST',
@@ -208,14 +208,27 @@ export function registerAiIpc(): void {
         buffer = lines.pop() || ''
 
         const { text, done: streamDone } = extractTextFromStreamLines(lines)
-        accumulated += text
+        if (text) {
+          accumulated += text
+          // 实时推送 intermediate chunk 到渲染进程
+          event.sender.send(IPC_CHANNELS.AI_CHAT_COMPLETION_STREAM_CHUNK, {
+            requestId: requestId || '',
+            text: accumulated
+          })
+        }
         if (streamDone) break
       }
 
       // Process remaining buffer
       if (buffer.trim()) {
         const { text } = extractTextFromStreamLines([buffer])
-        accumulated += text
+        if (text) {
+          accumulated += text
+          event.sender.send(IPC_CHANNELS.AI_CHAT_COMPLETION_STREAM_CHUNK, {
+            requestId: requestId || '',
+            text: accumulated
+          })
+        }
       }
 
       log.debug(`[AI-IPC] Chat response: "${accumulated.substring(0, 100)}"`)

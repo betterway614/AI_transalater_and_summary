@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockApi = {
-  ai: { transcribe: vi.fn(), chatCompletion: vi.fn(), testConnection: vi.fn() },
+  ai: { transcribe: vi.fn(), chatCompletion: vi.fn(), chatCompletionStream: vi.fn(), testConnection: vi.fn() },
   store: { get: vi.fn().mockResolvedValue(null), set: vi.fn().mockResolvedValue({ success: true }) },
   ytdlp: { onProgress: vi.fn().mockReturnValue(() => {}), extractAudio: vi.fn(), getInfo: vi.fn(), cancel: vi.fn(), setCookies: vi.fn() },
   floating: { show: vi.fn().mockResolvedValue(true), hide: vi.fn().mockResolvedValue(true), updateSubtitles: vi.fn().mockResolvedValue(true), updateTheme: vi.fn().mockResolvedValue(true), updateSummary: vi.fn().mockResolvedValue(true), setExpanded: vi.fn() },
@@ -10,6 +10,16 @@ const mockApi = {
 }
 
 Object.defineProperty(window, 'api', { value: mockApi, writable: true })
+
+/** Helper: mock chatCompletionStream to call onChunk once then resolve */
+function mockStream(text: string) {
+  mockApi.ai.chatCompletionStream.mockImplementationOnce(
+    (_config: any, onChunk: (t: string) => void) => {
+      onChunk(text)
+      return Promise.resolve(text)
+    }
+  )
+}
 
 import { useSubtitleStore } from '../src/renderer/src/store/subtitleStore'
 import { useAppStore } from '../src/renderer/src/store/appStore'
@@ -39,7 +49,7 @@ describe('Integration: Full Pipeline', () => {
     const transcribedText = await whisper.transcribe(wavBlob)
     expect(transcribedText).toBe('Hello, this is a test sentence.')
 
-    mockApi.ai.chatCompletion.mockResolvedValueOnce({ text: '你好，这是一个测试句子。' })
+    mockStream('你好，这是一个测试句子。')
     const deepseek = new DeepSeekService({ apiKey: 'test-key' })
     let translatedText = ''
     for await (const chunk of deepseek.streamingTranslate(transcribedText)) {
@@ -71,7 +81,7 @@ describe('Integration: Full Pipeline', () => {
   it('should handle multiple sequential translations with context', async () => {
     const store = useSubtitleStore.getState()
     mockApi.ai.transcribe.mockResolvedValueOnce({ text: 'First sentence.' })
-    mockApi.ai.chatCompletion.mockResolvedValueOnce({ text: '第一句话。' })
+    mockStream('第一句话。')
 
     const whisper = new WhisperService({ apiKey: 'test-key' })
     const deepseek = new DeepSeekService({ apiKey: 'test-key' })
@@ -84,7 +94,7 @@ describe('Integration: Full Pipeline', () => {
     store.addEntry({ ...store.createEntry(text1, 'url'), translatedText: trans1, isFinal: true })
 
     mockApi.ai.transcribe.mockResolvedValueOnce({ text: 'Second sentence.' })
-    mockApi.ai.chatCompletion.mockResolvedValueOnce({ text: '第二句话。' })
+    mockStream('第二句话。')
 
     const text2 = await whisper.transcribe(new Blob())
     const context = useSubtitleStore.getState().entries.filter(e => e.isFinal).slice(-3).map(e => e.originalText)
@@ -113,7 +123,7 @@ describe('Integration: Full Pipeline', () => {
   }, 15000)
 
   it('should handle translation error gracefully after retries', async () => {
-    mockApi.ai.chatCompletion.mockRejectedValue(new Error('DeepSeek API error: 429'))
+    mockApi.ai.chatCompletionStream.mockRejectedValue(new Error('DeepSeek API error: 429'))
 
     const deepseek = new DeepSeekService({ apiKey: 'test-key' })
     await expect(deepseek.streamingTranslate('test').next()).rejects.toThrow('DeepSeek API error: 429')

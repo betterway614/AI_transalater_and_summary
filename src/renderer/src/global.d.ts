@@ -67,6 +67,14 @@ interface ElectronAPI {
       messages: Array<{ role: string; content: string }>
       temperature?: number; maxTokens?: number
     }) => Promise<{ text: string }>
+    chatCompletionStream: (
+      config: {
+        baseUrl: string; apiKey: string; model: string
+        messages: Array<{ role: string; content: string }>
+        temperature?: number; maxTokens?: number
+      },
+      onChunk: (text: string) => void
+    ) => Promise<string>
     testConnection: (config: {
       baseUrl: string; apiKey: string
     }) => Promise<{ ok: boolean; status: number; statusText: string }>
