@@ -138,15 +138,23 @@ export function useSystemAudioCapture(options: SystemAudioOptions) {
           chunkBufferRef.current.push(chunk)
           chunkDurationRef.current += (chunk.length / ctx.sampleRate) * 1000
 
-          if (chunkDurationRef.current >= 8000) {
+          if (chunkDurationRef.current >= 5000) {
             flushBuffer()
           }
         } else if (chunkBufferRef.current.length > 0) {
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(() => {
               silenceTimerRef.current = null
+              // Drop fragments shorter than 250ms (industry standard: Silero VAD, faster-whisper, SenseVoice)
+              if (chunkDurationRef.current < 250) {
+                log(`[SysAudio] Dropping short fragment: dur=${chunkDurationRef.current.toFixed(0)}ms`)
+                chunkBufferRef.current = []
+                chunkDurationRef.current = 0
+                return
+              }
+              log(`[SysAudio] Silence flush: chunks=${chunkBufferRef.current.length} dur=${chunkDurationRef.current.toFixed(0)}ms`)
               flushBuffer()
-            }, 1500)
+            }, 500)
           }
         }
       }

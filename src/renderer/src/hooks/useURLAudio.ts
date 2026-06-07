@@ -6,8 +6,8 @@ import type { InputMode, SubtitleEntry } from '@shared/types'
 import { WhisperService } from '../services/whisper.service'
 import { DeepSeekService } from '../services/deepseek.service'
 import { useSettingsStore } from '../store/settingsStore'
+import { findSpeechSegments, splitSentences } from '../services/audio-processor'
 
-const CHUNK_DURATION_SEC = 30
 const SAMPLE_RATE = 16000
 const BYTES_PER_SAMPLE = 2
 const HEADER_SIZE = 44
@@ -63,8 +63,8 @@ export function useURLAudio() {
   const start = useCallback(async (url: string, mode: InputMode, options?: { partIndex?: number }) => {
     cancelledRef.current = false
     progressRef.current = 0
-    clearEntries() // Clear previous video's entries before starting new one
-    useSummaryStore.getState().reset() // Clear previous summary
+    clearEntries()
+    useSummaryStore.getState().reset()
     setStatus('connecting')
 
     try {
@@ -83,17 +83,17 @@ export function useURLAudio() {
 
       console.log(`[useURLAudio] Audio downloaded, buffer size: ${result.data.byteLength} bytes`)
 
-      // Step 2: Split WAV into chunks
-      const chunks = splitWavIntoChunks(result.data)
-      console.log(`[useURLAudio] Split into ${chunks.length} chunks`)
+      // Step 2: VAD-aware chunking — split at natural silence boundaries
+      const chunks = splitWavWithVAD(result.data)
+      console.log(`[useURLAudio] VAD split into ${chunks.length} chunks`)
       setStatus('listening')
 
-      // Step 3: Process each chunk sequentially
+      // Step 3: Process each chunk sequentially — fire-and-forget translation per sentence
+      const whisper = getWhisper()
       for (let i = 0; i < chunks.length; i++) {
         if (cancelledRef.current) break
 
         const chunkBlob = new Blob([chunks[i]], { type: 'audio/wav' })
-        const whisper = getWhisper()
 
         try {
           console.log(`[useURLAudio] Processing chunk ${i + 1}/${chunks.length}, size: ${chunkBlob.size} bytes`)
@@ -102,13 +102,22 @@ export function useURLAudio() {
             console.log(`[useURLAudio] Chunk ${i + 1}: empty transcription, skipping`)
             continue
           }
-
-          console.log(`[useURLAudio] Chunk ${i + 1} transcribed: "${text.substring(0, 80)}..."`)
-          const entry = createEntry(text, mode)
-          addEntry(entry)
           setStatus('translating')
 
-          await translateEntry(entry)
+          console.log(`[useURLAudio] Chunk ${i + 1} transcribed: "${text.substring(0, 80)}..."`)
+
+          // Split into sentences and create one entry per sentence for granular translation
+          const sentences = splitSentences(text)
+          const translationPromises: Promise<void>[] = []
+
+          for (const sentence of sentences) {
+            const entry = createEntry(sentence, mode)
+            addEntry(entry)
+            translationPromises.push(translateEntry(entry))
+          }
+
+          // Wait for all sentence translations in this chunk before next ASR call
+          await Promise.all(translationPromises)
         } catch (err) {
           console.error(`[useURLAudio] Chunk ${i + 1} error:`, err)
         }
@@ -147,16 +156,15 @@ export function useURLAudio() {
 }
 
 /**
- * Split a WAV ArrayBuffer (16kHz mono 16-bit) into chunk-sized WAV Blobs.
- * Each chunk gets a proper WAV header so Whisper API accepts it.
- * Properly parses WAV chunks to find the data payload (handles extra LIST/metadata chunks).
+ * Parse the WAV buffer, run VAD to find speech segments at natural silence
+ * boundaries, and return per-segment WAV ArrayBuffers.
+ *
+ * Parameters (batch-processing defaults):
+ *   minSpeechMs = 250   (industry consensus: Silero / faster-whisper / SenseVoice)
+ *   minSilenceMs = 500  (batch-mode standard)
+ *   maxSpeechMs = 20000 (20 s — keeps chunks manageable for Whisper + translation)
  */
-function splitWavIntoChunks(wavBuffer: ArrayBuffer): ArrayBuffer[] {
-  // Validate minimum WAV header size
-  if (wavBuffer.byteLength < 44) {
-    throw new Error(`WAV buffer too small: ${wavBuffer.byteLength} bytes (expected >= 44)`)
-  }
-
+function splitWavWithVAD(wavBuffer: ArrayBuffer): ArrayBuffer[] {
   const view = new DataView(wavBuffer)
 
   // Verify RIFF/WAVE signature
@@ -169,7 +177,7 @@ function splitWavIntoChunks(wavBuffer: ArrayBuffer): ArrayBuffer[] {
   // Parse WAV chunks to find the "data" chunk
   let dataOffset = -1
   let dataSize = -1
-  let offset = 12 // skip RIFF header
+  let offset = 12
 
   while (offset + 8 <= wavBuffer.byteLength) {
     const chunkId = String.fromCharCode(
@@ -184,7 +192,6 @@ function splitWavIntoChunks(wavBuffer: ArrayBuffer): ArrayBuffer[] {
       break
     }
 
-    // Skip to next chunk (chunks are 2-byte aligned)
     offset += 8 + chunkSize + (chunkSize % 2)
   }
 
@@ -192,23 +199,46 @@ function splitWavIntoChunks(wavBuffer: ArrayBuffer): ArrayBuffer[] {
     throw new Error('WAV data chunk not found')
   }
 
-  // Clamp dataSize to actual available bytes (some files may have inaccurate size)
   dataSize = Math.min(dataSize, wavBuffer.byteLength - dataOffset)
 
-  console.log(`[splitWavIntoChunks] WAV data at offset=${dataOffset}, size=${dataSize}, duration=${(dataSize / (SAMPLE_RATE * BYTES_PER_SAMPLE)).toFixed(1)}s`)
+  // Convert raw PCM bytes → Float32Array for VAD
+  const pcmBytes = new Int16Array(wavBuffer.slice(dataOffset, dataOffset + dataSize))
+  const pcmFloat = new Float32Array(pcmBytes.length)
+  for (let i = 0; i < pcmBytes.length; i++) {
+    pcmFloat[i] = pcmBytes[i] / 32768
+  }
 
-  const pcmData = wavBuffer.slice(dataOffset, dataOffset + dataSize)
-  const pcmBytes = pcmData.byteLength
-  const chunkPcmBytes = CHUNK_DURATION_SEC * SAMPLE_RATE * BYTES_PER_SAMPLE
-  const chunks: ArrayBuffer[] = []
+  // VAD segmentation
+  const segments = findSpeechSegments(pcmFloat, SAMPLE_RATE, {
+    vadThreshold: -40,
+    minSpeechMs: 250,
+    minSilenceMs: 500,
+    maxSpeechMs: 20000,
+  })
 
-  for (let pos = 0; pos < pcmBytes; pos += chunkPcmBytes) {
-    const end = Math.min(pos + chunkPcmBytes, pcmBytes)
-    const chunkPcm = pcmData.slice(pos, end)
-    const header = buildWavHeader(chunkPcm.byteLength)
-    const combined = new Uint8Array(header.byteLength + chunkPcm.byteLength)
+  console.log(`[splitWavWithVAD] Found ${segments.length} speech segments in ${(pcmFloat.length / SAMPLE_RATE).toFixed(1)}s audio`)
+
+  if (segments.length === 0) {
+    // Fallback: return the entire audio as one chunk (avoid losing content)
+    const header = buildWavHeader(dataSize)
+    const combined = new Uint8Array(header.byteLength + dataSize)
     combined.set(new Uint8Array(header), 0)
-    combined.set(new Uint8Array(chunkPcm), header.byteLength)
+    combined.set(new Uint8Array(wavBuffer.slice(dataOffset, dataOffset + dataSize)), header.byteLength)
+    return [combined.buffer]
+  }
+
+  // Build per-segment WAV chunks
+  const chunks: ArrayBuffer[] = []
+  for (const seg of segments) {
+    const segByteStart = seg.startSample * BYTES_PER_SAMPLE
+    const segByteEnd = seg.endSample * BYTES_PER_SAMPLE
+    const segBytes = segByteEnd - segByteStart
+    const segPcm = wavBuffer.slice(dataOffset + segByteStart, dataOffset + segByteEnd)
+
+    const header = buildWavHeader(segBytes)
+    const combined = new Uint8Array(header.byteLength + segBytes)
+    combined.set(new Uint8Array(header), 0)
+    combined.set(new Uint8Array(segPcm), header.byteLength)
     chunks.push(combined.buffer)
   }
 
@@ -220,18 +250,18 @@ function buildWavHeader(dataSize: number): ArrayBuffer {
   const v = new DataView(header)
   const blockAlign = BYTES_PER_SAMPLE // mono * 16-bit
 
-  v.setUint32(0, 0x52494646, false)  // "RIFF"
+  v.setUint32(0, 0x52494646, false)   // "RIFF"
   v.setUint32(4, dataSize + 36, true)
-  v.setUint32(8, 0x57415645, false)  // "WAVE"
-  v.setUint32(12, 0x666d7420, false) // "fmt "
+  v.setUint32(8, 0x57415645, false)   // "WAVE"
+  v.setUint32(12, 0x666d7420, false)  // "fmt "
   v.setUint32(16, 16, true)
-  v.setUint16(20, 1, true)           // PCM
-  v.setUint16(22, 1, true)           // mono
+  v.setUint16(20, 1, true)            // PCM
+  v.setUint16(22, 1, true)            // mono
   v.setUint32(24, SAMPLE_RATE, true)
   v.setUint32(28, SAMPLE_RATE * blockAlign, true)
   v.setUint16(32, blockAlign, true)
-  v.setUint16(34, 16, true)          // 16-bit
-  v.setUint32(36, 0x64617461, false) // "data"
+  v.setUint16(34, 16, true)           // 16-bit
+  v.setUint32(36, 0x64617461, false)  // "data"
   v.setUint32(40, dataSize, true)
 
   return header

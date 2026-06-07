@@ -128,7 +128,7 @@ export function useAudioCapture(options: AudioCaptureOptions) {
           chunkBufferRef.current.push(chunk)
           chunkDurationRef.current += (chunk.length / ctx.sampleRate) * 1000
 
-          if (chunkDurationRef.current >= 8000) {
+          if (chunkDurationRef.current >= 5000) {
             log(`[MicCapture] Flushing: dur=${chunkDurationRef.current.toFixed(0)}ms, chunks=${chunkBufferRef.current.length}`)
             flushBuffer()
           }
@@ -136,9 +136,16 @@ export function useAudioCapture(options: AudioCaptureOptions) {
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(() => {
               silenceTimerRef.current = null
-              log(`[MicCapture] Silence flush: chunks=${chunkBufferRef.current.length}`)
+              // Drop fragments shorter than 250ms (industry standard: Silero VAD, faster-whisper, SenseVoice)
+              if (chunkDurationRef.current < 250) {
+                log(`[MicCapture] Dropping short fragment: dur=${chunkDurationRef.current.toFixed(0)}ms`)
+                chunkBufferRef.current = []
+                chunkDurationRef.current = 0
+                return
+              }
+              log(`[MicCapture] Silence flush: chunks=${chunkBufferRef.current.length} dur=${chunkDurationRef.current.toFixed(0)}ms`)
               flushBuffer()
-            }, 1500)
+            }, 500)
           }
         }
       }

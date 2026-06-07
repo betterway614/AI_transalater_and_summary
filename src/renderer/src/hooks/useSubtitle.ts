@@ -4,11 +4,17 @@ import { useAppStore } from '../store/appStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { WhisperService } from '../services/whisper.service'
 import { DeepSeekService } from '../services/deepseek.service'
+import { computeTextOverlap } from '../services/audio-processor'
 import type { InputMode, SubtitleEntry } from '@shared/types'
+
+const DEDUP_OVERLAP_THRESHOLD = 0.6   // skip if overlap ratio >= this
+const DEDUP_LOOKBACK = 3              // compare against last N entries
+const DEDUP_MAX_AGE_MS = 8000         // ignore entries older than this for dedup
 
 /**
  * Optimized subtitle pipeline:
  * - Overlapping ASR/translation (fire-and-forget)
+ * - Text-level deduplication to suppress overlapping-audio repeats
  * - Throttled UI updates (100ms)
  * - Service cache invalidated on settings change
  * - Translation uses entry ID for correct replace (not "last entry")
@@ -90,15 +96,24 @@ export function useSubtitle() {
         console.log(`[Subtitle] Whisper result: "${text.substring(0, 100)}"`)
         if (!text.trim()) return
 
-        // Stage 2: Create subtitle entry
-        const entry = createEntry(text, currentMode)
-        addEntry(entry)
+        // Stage 1.5: Deduplicate — skip if largely overlapping with recent entries
+        if (isDuplicate(text)) {
+          console.log('[Subtitle] Skipping duplicate/overlapping text')
+          return
+        }
 
-        // Stage 3: Fire-and-forget translation (non-blocking for next chunk)
-        translateEntry(entry).catch((err) => {
-          console.error('Translation error:', err)
-          setStatus('error')
-        })
+        // Stage 2: Create subtitle entries (one per sentence for readability)
+        const sentences = splitSentences(text)
+        for (const sentence of sentences) {
+          const entry = createEntry(sentence, currentMode)
+          addEntry(entry)
+
+          // Stage 3: Fire-and-forget translation (non-blocking for next chunk)
+          translateEntry(entry).catch((err) => {
+            console.error('Translation error:', err)
+            setStatus('error')
+          })
+        }
       } catch (err) {
         console.error('ASR error:', err)
         setStatus('error')
@@ -127,4 +142,36 @@ export function useSubtitle() {
   )
 
   return { processAudioChunk }
+}
+
+/**
+ * Check whether `text` substantially overlaps with any recent finalized entry.
+ * Prevents overlapping audio from producing duplicate subtitle entries.
+ */
+function isDuplicate(text: string): boolean {
+  const now = Date.now()
+  const recentEntries = useSubtitleStore.getState().entries
+    .slice(-DEDUP_LOOKBACK)
+    .filter((e) => now - e.timestamp < DEDUP_MAX_AGE_MS)
+
+  for (const entry of recentEntries) {
+    const overlap = computeTextOverlap(text, entry.originalText)
+    if (overlap >= DEDUP_OVERLAP_THRESHOLD) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * Split transcribed text at sentence boundaries.
+ * Handles English (.!?) and Chinese (。！？) punctuation.
+ */
+function splitSentences(text: string): string[] {
+  if (!text.trim()) return []
+  const sentences = text
+    .split(/(?<=[.!?。！？])\s*/g)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+  return sentences.length > 0 ? sentences : [text.trim()]
 }
