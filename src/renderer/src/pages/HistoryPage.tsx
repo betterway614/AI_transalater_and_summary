@@ -1,12 +1,16 @@
-import { Box, Typography, Paper, Chip, IconButton, Tooltip, Collapse, Dialog, DialogTitle, DialogActions, Button, TextField, InputAdornment } from '@mui/material'
+import { Box, Typography, Paper, Chip, IconButton, Tooltip, Collapse, Dialog, DialogTitle, DialogActions, Button, TextField, InputAdornment, DialogContent, Tabs, Tab } from '@mui/material'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import HistoryIcon from '@mui/icons-material/History'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SearchIcon from '@mui/icons-material/Search'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import ArticleIcon from '@mui/icons-material/Article'
+import AccountTreeIcon from '@mui/icons-material/AccountTree'
+import CloseIcon from '@mui/icons-material/Close'
 import { useEffect, useState, useMemo } from 'react'
 import { useHistoryStore, type HistorySession } from '../store/historyStore'
-import { useSubtitleStore } from '../store/subtitleStore'
+import MindMap from '../components/Summary/MindMap'
 
 const modeLabels: Record<string, string> = {
   'url': 'URL 视频',
@@ -16,11 +20,11 @@ const modeLabels: Record<string, string> = {
 
 export default function HistoryPage() {
   const { sessions, loadHistory, deleteSession, clearHistory } = useHistoryStore()
-  const currentEntries = useSubtitleStore((s) => s.entries)
 
   const [searchQuery, setSearchQuery] = useState('')
   const [modeFilter, setModeFilter] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [detailSession, setDetailSession] = useState<HistorySession | null>(null)
 
   useEffect(() => {
     loadHistory()
@@ -117,6 +121,7 @@ export default function HistoryPage() {
             <Paper
               key={session.id}
               elevation={0}
+              onClick={() => setDetailSession(session)}
               sx={{
                 p: 2,
                 bgcolor: 'background.paper',
@@ -124,7 +129,7 @@ export default function HistoryPage() {
                 borderColor: 'divider',
                 borderRadius: 2,
                 transition: 'all 0.2s ease',
-                cursor: 'default',
+                cursor: 'pointer',
                 '&:hover': {
                   borderColor: 'primary.main',
                   boxShadow: '0 2px 12px var(--hover-glow)',
@@ -139,8 +144,11 @@ export default function HistoryPage() {
                   </Typography>
                   <Chip label={modeLabels[session.mode] || session.mode} size="small" variant="outlined" color="primary" />
                   <Chip label={`${session.entries.length} 条`} size="small" variant="outlined" />
+                  {session.summary && (
+                    <Chip label="含总结" size="small" variant="outlined" color="secondary" />
+                  )}
                 </Box>
-                <Box>
+                <Box onClick={(e) => e.stopPropagation()}>
                   <Tooltip title="复制" arrow>
                     <IconButton
                       size="small"
@@ -162,8 +170,9 @@ export default function HistoryPage() {
                 </Box>
               </Box>
 
-              <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
-                {session.entries.slice(0, 5).map((entry) => (
+              {/* Preview: first 3 entries */}
+              <Box sx={{ maxHeight: 140, overflow: 'hidden' }}>
+                {session.entries.slice(0, 3).map((entry) => (
                   <Box key={entry.id} sx={{ py: 0.5, borderBottom: '1px solid', borderColor: 'divider', '&:last-child': { border: 'none' } }}>
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
                       {entry.originalText}
@@ -173,20 +182,28 @@ export default function HistoryPage() {
                     </Typography>
                   </Box>
                 ))}
-                {session.entries.length > 5 && (
-                  <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5 }}>
-                    ...还有 {session.entries.length - 5} 条记录
-                  </Typography>
-                )}
               </Box>
+              {session.entries.length > 3 && (
+                <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: 'block' }}>
+                  ...还有 {session.entries.length - 3} 条 — 点击查看详情
+                </Typography>
+              )}
 
               {session.summary && (
-                <SessionSummaryCard summary={session.summary} />
+                <SessionSummaryPreview summary={session.summary} />
               )}
             </Paper>
           ))}
         </Box>
       )}
+
+      {/* Detail dialog */}
+      <SessionDetailDialog
+        session={detailSession}
+        onClose={() => setDetailSession(null)}
+        onCopy={handleCopySession}
+        onDelete={(id) => { deleteSession(id); setDetailSession(null) }}
+      />
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
@@ -206,13 +223,13 @@ export default function HistoryPage() {
   )
 }
 
-function SessionSummaryCard({ summary }: { summary: string }) {
+/** Inline summary preview — collapsed by default, max 3 lines */
+function SessionSummaryPreview({ summary }: { summary: string }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <Box sx={{ mt: 1 }}>
+    <Box sx={{ mt: 1 }} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}>
       <Box
-        onClick={() => setExpanded(!expanded)}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -249,22 +266,149 @@ function SessionSummaryCard({ summary }: { summary: string }) {
             bgcolor: 'rgba(156, 39, 176, 0.03)',
             border: '1px solid',
             borderColor: 'rgba(156, 39, 176, 0.08)',
-            maxHeight: 300,
+            maxHeight: 200,
             overflowY: 'auto'
           }}
         >
-          <Typography
-            variant="body2"
-            sx={{
-              fontSize: 13,
-              lineHeight: 1.7,
-              whiteSpace: 'pre-wrap'
-            }}
-          >
+          <Typography variant="body2" sx={{ fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
             {summary}
           </Typography>
         </Box>
       </Collapse>
     </Box>
   )
+}
+
+/** Full detail dialog: subtitle list + summary + mind map */
+function SessionDetailDialog({
+  session,
+  onClose,
+  onCopy,
+  onDelete
+}: {
+  session: HistorySession | null
+  onClose: () => void
+  onCopy: (s: HistorySession) => void
+  onDelete: (id: string) => void
+}) {
+  const [tab, setTab] = useState(0)
+  const showSummaryTabs = session?.summary != null
+
+  if (!session) return null
+
+  return (
+    <Dialog
+      open={!!session}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        sx: { maxHeight: '90vh', display: 'flex', flexDirection: 'column' }
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            {new Date(session.startTime).toLocaleString('zh-CN')}
+          </Typography>
+          <Chip label={modeLabels[session.mode] || session.mode} size="small" color="primary" />
+          <Chip label={`${session.entries.length} 条`} size="small" variant="outlined" />
+          <Typography variant="caption" color="text.disabled">
+            {formatDuration(session.startTime, session.endTime)}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title="复制全部字幕" arrow>
+            <IconButton size="small" onClick={() => onCopy(session)}>
+              <ContentCopyIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="删除" arrow>
+            <IconButton size="small" onClick={() => onDelete(session.id)}>
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <IconButton size="small" onClick={onClose}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* Tabs */}
+      {showSummaryTabs && (
+        <Tabs
+          value={tab}
+          onChange={(_, v) => setTab(v)}
+          sx={{
+            minHeight: 40,
+            borderBottom: 1,
+            borderColor: 'divider',
+            px: 2,
+            flexShrink: 0,
+            '& .MuiTab-root': { minHeight: 40, py: 0, fontSize: '0.85rem', textTransform: 'none' }
+          }}
+        >
+          <Tab icon={<ArticleIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="字幕" />
+          <Tab icon={<ArticleIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="AI 总结" />
+          <Tab icon={<AccountTreeIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="思维导图" />
+        </Tabs>
+      )}
+
+      {/* Content */}
+      <DialogContent sx={{ flex: 1, overflow: 'auto', pt: showSummaryTabs ? 1 : 2 }}>
+        {(!showSummaryTabs || tab === 0) && (
+          <Box>
+            {session.entries.map((entry) => (
+              <Box
+                key={entry.id}
+                sx={{
+                  py: 1,
+                  px: 1,
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  '&:hover': { bgcolor: 'action.hover' },
+                  transition: 'background-color 0.1s ease'
+                }}
+              >
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13, mb: 0.25 }}>
+                  {entry.originalText}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'secondary.main', fontSize: 15, fontWeight: 500 }}>
+                  {entry.translatedText}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
+
+        {showSummaryTabs && tab === 1 && (
+          <Box sx={{ p: 1 }}>
+            <Typography
+              variant="body2"
+              component="pre"
+              sx={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', lineHeight: 1.8, fontSize: 14 }}
+            >
+              {session.summary}
+            </Typography>
+          </Box>
+        )}
+
+        {showSummaryTabs && tab === 2 && (
+          <Box sx={{ minHeight: 400 }}>
+            <MindMap markdown={session.summary!} />
+          </Box>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function formatDuration(start: number, end: number): string {
+  const diff = Math.max(0, end - start)
+  const min = Math.floor(diff / 60000)
+  const sec = Math.floor((diff % 60000) / 1000)
+  if (min > 0) return `时长 ${min}分${sec}秒`
+  return `时长 ${sec}秒`
 }
